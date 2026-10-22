@@ -1,6 +1,6 @@
 # Let's Eat — technical specification
 
-Status: implementation specification. The repository currently contains documentation only; application code and test results are still to be produced. This spec implements [the product plan](plan.md), with decisions summarized in [APPROACH.md](../APPROACH.md).
+Status: implementation specification. Current progress and verification results are recorded in [APPROACH.md](../APPROACH.md). This spec implements [the product plan](plan.md).
 
 ## 1. What we need and what we choose
 

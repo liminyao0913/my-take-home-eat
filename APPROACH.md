@@ -65,6 +65,8 @@ The implementation details and verification gates are in [docs/tech-spec.md](doc
 
 The product plan includes acceptance scenarios for voting, preference fallback, ties, exclusions, identity continuity, the deadline, and frozen results. Product targets are a room created in under a minute, a useful response in about thirty seconds, and resolution in ten minutes.
 
-The technical spec now defines the stack, four-table schema, API, deadline semantics, deployment, and implementation sequence. The next milestone is the runnable foundation, followed by the shared-room flow and decision logic.
+The technical spec defines the stack, four-table schema, API, deadline semantics, deployment, and implementation sequence. The runnable foundation is in place; shared-room behavior and decision logic are next.
 
-Application tests have not run yet because implementation has not started. Completion requires passing the browser journeys, verifying the real ten-minute deadline, checking persistence after restart, and testing the deployed shared link. Record actual results and any necessary changes here as the work proceeds.
+Foundation verification: generated and applied the four-table migration, passed type checking and lint, built Next.js for production, started it, and received a healthy database readiness response. Node 24.22.1 is pinned for the project.
+
+Unit, integration, and browser suites remain to be implemented and run. Completion requires passing the browser journeys, verifying the real ten-minute deadline, checking persistence after restart, and testing the deployed shared link. Record actual results and any necessary changes here as the work proceeds.
