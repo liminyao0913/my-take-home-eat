@@ -16,7 +16,7 @@ function Countdown({ data, receivedAt, refresh }: { data: RoomSnapshot; received
     const timer = setInterval(() => {
       const elapsed = Date.now() - receivedAt;
       setClock({ receivedAt, elapsed });
-      if (data.serverNow + elapsed >= data.room.deadlineAt) void refresh();
+      if (document.visibilityState === "visible" && data.serverNow + elapsed >= data.room.deadlineAt) void refresh();
     }, 1000);
     return () => clearInterval(timer);
   }, [data.room.deadlineAt, data.serverNow, data.state, receivedAt, refresh]);
@@ -81,6 +81,7 @@ export function Room({ roomId }: { roomId: string }) {
     {data.result && <Result data={data} />}
     <div className="room-layout">
       <section className="options-section" aria-labelledby="options-title"><div className="options-heading"><h2 id="options-title">On the table <span>{data.options.length}</span></h2>{open && <span className="small muted">Vote for as many as you like</span>}</div>
+        {open && <p className="voting-note">“Can&apos;t do this” rules an option out for everyone.</p>}
         <div className="option-list">{data.options.map((option, index) => <article className={`panel meal-card ${option.blockCount ? "blocked" : ""}`} key={option.id} aria-labelledby={`meal-${option.id}`}>
           <div className="meal-title"><span className="meal-number">{String(index + 1).padStart(2, "0")}</span><h3 id={`meal-${option.id}`}>{option.placeName}</h3>{open && option.authorId === data.me?.id && <button className="text-button remove-option" disabled={busy} onClick={() => void action(`/options/${option.id}`, "DELETE")} aria-label={`Remove ${option.placeName}`}>Remove</button>}</div>
           <MealDetails option={option} timeZone={data.room.timeZone} />

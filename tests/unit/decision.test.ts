@@ -8,7 +8,7 @@ const meal = (id: number, changes: Partial<MealOption> = {}): MealOption => ({
   id, authorId: "one", placeName: `Meal ${id}`, location: "Main St", cuisine: "Thai", priceLevel: 2,
   startAt: toInstant("2027-06-01", "12:30", "UTC"), link: null, approvalCount: 0, blockCount: 0, ...changes,
 });
-const choose = (options: MealOption[], preferences: Preferences[] = []) => decide({ options, preferences, participantCount: 3, voterCount: 2, timeZone: "UTC", deadlineAt: 123 });
+const choose = (options: MealOption[], preferences: Preferences[] = []) => decide({ options, preferences, participantCount: Math.max(3, preferences.length), voterCount: 2, timeZone: "UTC", deadlineAt: 123 });
 
 describe("decision order", () => {
   it("prioritizes a clear approval winner over a better preference match", () => {
@@ -34,6 +34,16 @@ describe("decision order", () => {
     expect(result.winner?.id).toBe(4);
     expect(result.basis).toBe("first-proposed");
     expect(result.groupMatchPercent).toBe(50);
+  });
+  it("ties six one-third matches with two full matches without floating-point drift", () => {
+    const preferences: Preferences[] = [
+      ...Array.from({ length: 2 }, () => ({ ...blank, cuisines: ["Italian"] as Preferences["cuisines"], maxPriceLevel: 3, startTime: "13:30", endTime: "13:30" })),
+      ...Array.from({ length: 4 }, () => ({ ...blank, cuisines: ["Thai"] as Preferences["cuisines"], maxPriceLevel: 1, startTime: "14:00", endTime: "15:00" })),
+    ];
+    const result = choose([meal(1), meal(2, { cuisine: "Italian", priceLevel: 3, startAt: toInstant("2027-06-01", "13:30", "UTC") })], preferences);
+    expect(result.winner?.id).toBe(1);
+    expect(result.basis).toBe("first-proposed");
+    expect(result.groupMatchPercent).toBeCloseTo(100 / 3);
   });
   it("excludes even the most popular blocked meal and explains excluded approvals", () => {
     const result = choose([meal(1, { blockCount: 1, approvalCount: 8 }), meal(2)]);

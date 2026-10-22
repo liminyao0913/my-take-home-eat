@@ -12,6 +12,7 @@ This is the running decision record for Let's Eat. Keep it updated as product an
 - Favor a small first version and move to a technical spec once the product rules are clear.
 - Use SQLite, as explicitly requested.
 - Deliver a working product and verify it with end-to-end tests.
+- Finish with a locally running, tested app; public hosting is deferred at the user's request.
 
 ## Product baseline after the simplicity pass
 
@@ -52,7 +53,7 @@ The implementation details and verification gates are in [docs/tech-spec.md](doc
 | Tailwind CSS with semantic HTML and ordinary React state. | Keeps the small interface accessible without adding a component or global state framework. |
 | SQLite through Drizzle and better-sqlite3. | Honors the database choice, provides migrations and typed queries, and needs no database server. |
 | One Node.js 24 app with a local persistent database file. | Fits SQLite's storage model; run one service instance and keep transactions short. |
-| Render with a persistent disk as the deployment target. | Keeps the SQLite file across restarts and deploys; this requires a paid disk-backed service. |
+| Local delivery now; retain Render with a persistent disk as a future deployment option. | The user chose local delivery. The prepared configuration keeps the SQLite file across restarts if hosting is later requested. |
 | A random HttpOnly guest cookie, with only its hash stored per room participant. | Supports identity and ownership without accounts; the shared link is distinct from the participant credential. |
 | Poll the room every three seconds while visible and open. | Sufficient for small groups; avoids maintaining live connections. |
 | Enforce the persisted deadline on the server; save the result on the first request after expiry. | No worker or browser timer is required. Closure is effective at the deadline even when snapshot materialization happens later. |
@@ -69,12 +70,18 @@ The technical spec defines the stack, four-table schema, API, deadline semantics
 
 Foundation verification: generated and applied the four-table migration, passed type checking and lint, built Next.js for production, started it, and received a healthy database readiness response. Node 24.22.1 is pinned for the project.
 
-Backend verification: 15 unit tests and 11 integration tests pass, as do type checking and lint. Tests use the committed migrations and temporary SQLite files. They cover scoring, time-zone changes, guest ownership, private inputs, idempotent votes, leaving, immutable results, and a separate worker holding a write lock across the deadline. A late write materializes and commits the result before returning its rejection. Independent connections and reopening the database preserve the saved result.
+Backend verification: 16 unit tests and 11 integration tests pass, as do type checking and lint. Tests use the committed migrations and temporary SQLite files. They cover scoring (including a tie that floating-point sums would misorder), time-zone changes, guest ownership, private inputs, idempotent votes, leaving, immutable results, and a separate worker holding a write lock across the deadline. A late write materializes and commits the result before returning its rejection. Independent connections and reopening the database preserve the saved result.
 
 Successful room mutations return the updated snapshot, including deletions, so the UI can display acknowledged changes immediately. The voter count means people with at least one approval, including approvals on excluded options; excluded approvals are explained separately.
 
 The interface uses a warm paper background, green controls, and clear meal cards. Browser-local defaults suggest a meal an hour ahead. Polling does not replace unsaved preferences or option drafts; mutations invalidate older reads. The countdown uses server time, while all admission and closure checks remain on the server.
 
-Initial browser verification: seven complete journeys passed against the production build and actual SQLite, including concurrent voting, preference fallback, blocks, ownership and origin checks, identity continuity, tie handling, and offline closure. The mobile case found an ambiguous test selector (the framework also has a route-announcement alert); the selector is corrected. The full release suite, including a real ten-minute round and application restart/backup restoration, is currently running.
+Release browser verification: all 10 scenarios passed against the production build and actual SQLite in 10.9 minutes. The unaccelerated round kept its original 600,000 ms deadline and chose the same winner in two browser sessions. Application restarts preserved identity, options, votes, and the frozen result. A consistent live backup also restored that same result in another process. The suite covers concurrent votes, preference fallback, blocks, ownership/origin checks, identity continuity, ties, offline closure, and mobile keyboard use.
 
-Deployment configuration and recovery instructions are in `render.yaml` and `docs/deployment.md`. The Render integration is available but not connected, and this repository has no remote yet. No paid resources have been created and no public deployment is claimed. The hosted smoke and restart checks remain pending.
+The final production build passed, then the expanded regular browser suite passed all 10 of its runnable cases in 51.3 seconds (the already-verified ten-minute case was intentionally skipped). Its additional network-failure test verifies draft preservation, successful retry, and reload persistence. In total, all 11 distinct browser scenarios have been verified. Final UI changes pause deadline-triggered refreshes while hidden and explain the group-wide block rule beside the voting controls, including on mobile.
+
+The Render Blueprint validates against its official schema. Its startup command was exercised locally against a fresh database: migrations, readiness, origin handling, and room creation passed. CI configuration is provided; no remote CI run is claimed.
+
+The user chose local delivery when asked about the deployment repository. Public deployment is deferred and is no longer a completion requirement for this implementation. Future deployment configuration and recovery instructions remain in `render.yaml` and `docs/deployment.md`. No remote, paid resources, or public deployment have been created.
+
+Local delivery is complete. The production server was started at `http://localhost:3000` using `npm run start:host`, with the database at `.data/lets-eat.sqlite`. Detailed commands and evidence are in [docs/verification.md](docs/verification.md). Every repository commit uses the user's configured author and committer identity, Limin Yao <isabel0913@gmail.com>.

@@ -164,3 +164,19 @@ test("mobile keyboard flow, inline validation, and a copyable result", async ({ 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("Pasta House");
   await page.screenshot({ path: testInfo.outputPath("mobile-result.png"), fullPage: true });
 });
+
+test("a network failure preserves the preference draft until a successful retry", async ({ page, context }) => {
+  await createRoom(page);
+  await page.getByText("My preferences", { exact: false }).click();
+  await page.getByLabel("Thai", { exact: true }).check();
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await expect(page.locator(".preference-panel").getByRole("alert")).toContainText("Your draft is still here");
+  await expect(page.getByLabel("Thai", { exact: true })).toBeChecked();
+  await context.setOffline(false);
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await expect(page.getByText("Saved ✓", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByText("My preferences", { exact: false }).click();
+  await expect(page.getByLabel("Thai", { exact: true })).toBeChecked();
+});

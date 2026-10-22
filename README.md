@@ -49,7 +49,7 @@ Use `npm run test:e2e:release` to include an actual ten-minute round. Open `play
 
 ## Deploy
 
-Use the [Render configuration](render.yaml) and [deployment/recovery guide](docs/deployment.md). Deployment requires a connected Render workspace, a source repository, and a paid persistent disk. Keep one app instance and apply migrations at runtime through `npm run start:host`.
+The current delivery is local; public hosting is deferred. For a future deployment, use the [Render configuration](render.yaml) and [deployment/recovery guide](docs/deployment.md). Deployment requires a connected Render workspace, a source repository, and a paid persistent disk. Keep one app instance and apply migrations at runtime through `npm run start:host`.
 
 ## Database changes and backups
 

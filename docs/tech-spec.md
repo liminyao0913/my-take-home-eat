@@ -2,6 +2,8 @@
 
 Status: implementation specification. Current progress and verification results are recorded in [APPROACH.md](../APPROACH.md). This spec implements [the product plan](plan.md).
 
+Delivery update: the user selected **local delivery** during implementation. Complete the app, local release tests, ten-minute deadline check, and restart/restore verification. The Render setup below is retained for a future deployment; hosted checks are deferred.
+
 ## 1. What we need and what we choose
 
 Build **one full-stack TypeScript application backed by a SQLite file**. UI, backend, and database are distinct responsibilities, but the UI and backend ship together and SQLite runs inside the app process.
@@ -302,8 +304,8 @@ Before claiming completion, record the commands and outcomes, the deployed URL, 
 | 3. Decision inputs | Preferences, approvals, blocks, leaving, ownership checks | Relevant unit and integration tests pass; UI actions agree across contexts. |
 | 4. Closure | Atomic deadline checks, scoring, stored result and explanation | Preference/vote/tie cases pass; late writes fail; closure survives offline intervals. |
 | 5. Complete UI and E2E | Responsive forms, errors, final summary, full browser suite | All required browser journeys pass against the production build and real SQLite. |
-| 6. Release | Persistent-disk deployment, backup/restore instructions, hosted smoke test | Public link works across sessions; normal deadline and restart persistence are verified. |
+| 6. Local release | Running local app, backup/restore instructions, release browser suite | Local link works across sessions; normal deadline, application restart, and backup restoration are verified. Public hosting is deferred. |
 
 Commit each coherent milestone using the repository's configured Git identity. Update APPROACH.md when implementation reveals a necessary change to these decisions.
 
-Done means the product can be used through a real shared link, its data survives a restart, its decision rules match the product plan, and its end-to-end checks have actually passed.
+Done for the agreed local delivery means the product runs locally through a shared room link, its data survives a restart, its decision rules match the product plan, and its end-to-end checks have actually passed.

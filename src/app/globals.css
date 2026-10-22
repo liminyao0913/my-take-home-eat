@@ -80,6 +80,7 @@ input[aria-invalid=true], select[aria-invalid=true] { border-color: #ae422c; }
 .options-heading h2, .people-panel h2 { font-size: 16px; font-weight: 600; }
 .options-heading h2 span, .people-panel h2 span { font-size: 12px; font-weight: 400; background: #e9eddf; padding: 3px 7px; border-radius: 5px; margin-left: 6px; }
 .option-list, .room-sidebar { display: grid; gap: 16px; }
+.voting-note { color: var(--muted); font-size: 12px; margin: -5px 0 16px; }
 .meal-card { padding: 22px; }
 .meal-title { display: flex; gap: 12px; align-items: baseline; margin-bottom: 12px; }
 .meal-title h3 { font-size: 19px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }

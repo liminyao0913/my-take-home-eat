@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: 0.5c-512mb
     numInstances: 1
-    autoDeployTrigger: off
+    autoDeployTrigger: "off"
     buildCommand: npm ci --include=dev && npm run build
     startCommand: APP_ORIGIN="${APP_ORIGIN:-$RENDER_EXTERNAL_URL}" npm run start:host
     healthCheckPath: /api/health

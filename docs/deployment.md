@@ -1,6 +1,6 @@
 # Deployment and recovery
 
-The repository includes a [Render Blueprint](../render.yaml) for one Node.js web service with a 1 GB persistent disk. It uses SQLite only. Applying this Blueprint creates paid resources; review the selected service and disk cost in Render before creating them. The Blueprint itself has not yet been deployed.
+The user selected local delivery; this guide is for a future deployment. The repository includes a [Render Blueprint](../render.yaml) for one Node.js web service with a 1 GB persistent disk. It uses SQLite only. Applying this Blueprint creates paid resources; review the selected service and disk cost in Render before creating them. The Blueprint itself has not yet been deployed.
 
 ## First deployment
 
