@@ -137,7 +137,7 @@ SQLite permits one writer at a time. WAL allows concurrent readers, but the data
 
 ## 6. API contract
 
-All endpoints use JSON except successful empty deletions. Response objects expose explicit public fields rather than serializing database rows.
+All endpoints use JSON. Successful room mutations return the updated snapshot, including deletions. Response objects expose explicit public fields rather than serializing database rows.
 
 | Method and route | Input / effect |
 | --- | --- |
