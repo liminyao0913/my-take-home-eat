@@ -10,6 +10,8 @@ This is the running decision record for Let's Eat. Keep it updated as product an
 - Let the creator suggest several meals and every participant add more.
 - Let people vote and provide preferences; use preferences to choose when nobody votes.
 - Favor a small first version and move to a technical spec once the product rules are clear.
+- Use SQLite, as explicitly requested.
+- Deliver a working product and verify it with end-to-end tests.
 
 ## Product baseline after the simplicity pass
 
@@ -40,8 +42,29 @@ These defaults resolve the brainstorming questions in favor of simplicity. They 
 - The fallback uses a simple average. More sophisticated fairness rules should wait for evidence.
 - Sign-up, profiles, discovery, reservations, payments, reminders, in-app chat, and recurring-group history are outside v1.
 
-## Validation and next decisions
+## Technical choices
+
+The implementation details and verification gates are in [docs/tech-spec.md](docs/tech-spec.md).
+
+| Decision | Reason and tradeoff |
+| --- | --- |
+| Next.js App Router, React, and TypeScript for the UI and backend. | One repository and deployment; Route Handlers expose the room API. |
+| Tailwind CSS with semantic HTML and ordinary React state. | Keeps the small interface accessible without adding a component or global state framework. |
+| SQLite through Drizzle and better-sqlite3. | Honors the database choice, provides migrations and typed queries, and needs no database server. |
+| One Node.js 24 app with a local persistent database file. | Fits SQLite's storage model; run one service instance and keep transactions short. |
+| Render with a persistent disk as the deployment target. | Keeps the SQLite file across restarts and deploys; this requires a paid disk-backed service. |
+| A random HttpOnly guest cookie, with only its hash stored per room participant. | Supports identity and ownership without accounts; the shared link is distinct from the participant credential. |
+| Poll the room every three seconds while visible and open. | Sufficient for small groups; avoids maintaining live connections. |
+| Enforce the persisted deadline on the server; save the result on the first request after expiry. | No worker or browser timer is required. Closure is effective at the deadline even when snapshot materialization happens later. |
+| Immediate SQLite transactions for mutations and finalization. | Serializes competing changes and makes the deadline check and result write atomic. |
+| Represent preference fractions in exact integer sixths. | Preserves the simple average while making ties independent of floating-point rounding. |
+| Vitest for logic/database tests and Playwright for real browser journeys. | Verify a production build with real SQLite and separate participant sessions; include deadline and restart persistence. |
+| Use the existing Git configuration for author and committer identity. | Keep commits attributed consistently with the user's configuration. |
+
+## Validation and next steps
 
 The product plan includes acceptance scenarios for voting, preference fallback, ties, exclusions, identity continuity, the deadline, and frozen results. Product targets are a room created in under a minute, a useful response in about thirty seconds, and resolution in ten minutes.
 
-No stack, database, hosting, or implementation architecture has been selected. The next step is a technical spec covering those choices plus browser identity, shared updates, deadline execution, and tests. Append the rationale here as each choice is made.
+The technical spec now defines the stack, four-table schema, API, deadline semantics, deployment, and implementation sequence. The next milestone is the runnable foundation, followed by the shared-room flow and decision logic.
+
+Application tests have not run yet because implementation has not started. Completion requires passing the browser journeys, verifying the real ten-minute deadline, checking persistence after restart, and testing the deployed shared link. Record actual results and any necessary changes here as the work proceeds.

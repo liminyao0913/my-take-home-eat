@@ -1,6 +1,6 @@
 # Let's Eat — simple v1 product plan
 
-Status: simplified product baseline, ready to inform the technical spec. The audience and core flow are confirmed; the choices below are defaults selected in response to the request for simplicity. Technology choices come next.
+Status: simplified product baseline. The audience and core flow are confirmed; the choices below are defaults selected in response to the request for simplicity. Implementation choices are in [the technical spec](tech-spec.md).
 
 ## 1. Product and audience
 
@@ -174,6 +174,6 @@ Before implementation is considered complete, verify:
 
 Check the flow on separate devices, and ask a small trial group to explain why the result won. Target creation in under a minute and a useful response in about thirty seconds.
 
-## 8. Next: technical spec
+## 8. Implementation and verification
 
-The product baseline is ready for a technical discussion. Next decide the stack, storage, browser identity, shared updates, deadline handling, deployment, and tests. Record decisions and tradeoffs in [APPROACH.md](../APPROACH.md) as they are made.
+The [technical spec](tech-spec.md) defines the UI, backend, SQLite database, deadline handling, deployment, and end-to-end tests. Its deadline design closes the room logically at the cutoff and saves the immutable result on the first subsequent request, so closure does not depend on an open browser. Record decisions and tradeoffs in [APPROACH.md](../APPROACH.md) as implementation proceeds.
