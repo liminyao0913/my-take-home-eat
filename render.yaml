@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: lets-eat
+    runtime: node
+    region: oregon
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: off
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: APP_ORIGIN="${APP_ORIGIN:-$RENDER_EXTERNAL_URL}" npm run start:host
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
+      - key: DATABASE_PATH
+        value: /var/data/lets-eat.sqlite
+    disk:
+      name: lets-eat-data
+      mountPath: /var/data
+      sizeGB: 1

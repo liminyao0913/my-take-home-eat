@@ -1,3 +1,19 @@
+import { CreateRoom } from "@/components/create-room";
+import { Header } from "@/components/header";
+
 export default function Home() {
-  return <main className="mx-auto max-w-3xl p-12"><h1 className="text-5xl font-bold">Let&apos;s Eat</h1><p className="mt-5 text-lg">Less debating. More eating.</p></main>;
+  return <><Header /><main className="landing">
+    <section className="intro">
+      <span className="pill"><span className="live-dot" />TEN MINUTES. ONE DECISION.</span>
+      <h1>Less debating.<br /><em>More eating.</em></h1>
+      <p className="intro-copy">The group chat is hungry. Give your next lunch or dinner a little direction, with one shared link.</p>
+      <ol className="steps">
+        <li><span>01</span><div><h2>Put a few ideas on the table</h2><p>A place, a time, and a rough price. Keep it simple.</p></div></li>
+        <li><span>02</span><div><h2>Find your common ground</h2><p>Friends add ideas, vote, or share what they like.</p></div></li>
+        <li><span>03</span><div><h2>Make a plan. Go eat.</h2><p>Most approvals wins. Preferences settle a tie, or pick when nobody votes.</p></div></li>
+      </ol>
+      <div className="table-note"><span className="note-mark" aria-hidden="true">✳</span><p>Made for the everyday<br /><strong>“Where should we eat?”</strong></p></div>
+    </section>
+    <CreateRoom />
+  </main><footer className="site-footer">A little less planning. A little more time together.</footer></>;
 }

@@ -1,0 +1,40 @@
+name: Verify
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      real_deadline:
+        description: Also run the real ten-minute browser journey
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run test:integration
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          RUN_REAL_DEADLINE: ${{ inputs.real_deadline && '1' || '0' }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: browser-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

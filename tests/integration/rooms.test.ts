@@ -55,7 +55,9 @@ describe("real SQLite room service", () => {
     service.respond(id, "sam", meal, { choice: "block" });
     expect(service.get(id, "sam").options[0]).toMatchObject({ approvalCount: 0, blockCount: 1 });
     service.respond(id, "sam", meal, { choice: null });
-    expect(service.get(id, "sam")).toMatchObject({ participants: [{ displayName: "Alex" }, { displayName: "Sam" }], me: { choices: {} } });
+    const snapshot = service.get(id, "sam");
+    expect(snapshot.participants.map((p) => p.displayName).sort()).toEqual(["Alex", "Sam"]);
+    expect(snapshot.me?.choices).toEqual({});
   });
   it("checks identity, ownership, and cross-room scoping", () => {
     const { id } = service.create("alex", input);

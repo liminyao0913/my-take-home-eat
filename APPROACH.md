@@ -65,7 +65,7 @@ The implementation details and verification gates are in [docs/tech-spec.md](doc
 
 The product plan includes acceptance scenarios for voting, preference fallback, ties, exclusions, identity continuity, the deadline, and frozen results. Product targets are a room created in under a minute, a useful response in about thirty seconds, and resolution in ten minutes.
 
-The technical spec defines the stack, four-table schema, API, deadline semantics, deployment, and implementation sequence. The foundation and room backend are implemented; the complete browser interface is next.
+The technical spec defines the stack, four-table schema, API, deadline semantics, deployment, and implementation sequence. The foundation, room backend, and complete browser interface are implemented.
 
 Foundation verification: generated and applied the four-table migration, passed type checking and lint, built Next.js for production, started it, and received a healthy database readiness response. Node 24.22.1 is pinned for the project.
 
@@ -73,4 +73,8 @@ Backend verification: 15 unit tests and 11 integration tests pass, as do type ch
 
 Successful room mutations return the updated snapshot, including deletions, so the UI can display acknowledged changes immediately. The voter count means people with at least one approval, including approvals on excluded options; excluded approvals are explained separately.
 
-The browser suite remains to be implemented and run. Completion requires passing the browser journeys, verifying the real ten-minute deadline, checking persistence after an application restart, and testing the deployed shared link. Record actual results and any necessary changes here as the work proceeds.
+The interface uses a warm paper background, green controls, and clear meal cards. Browser-local defaults suggest a meal an hour ahead. Polling does not replace unsaved preferences or option drafts; mutations invalidate older reads. The countdown uses server time, while all admission and closure checks remain on the server.
+
+Initial browser verification: seven complete journeys passed against the production build and actual SQLite, including concurrent voting, preference fallback, blocks, ownership and origin checks, identity continuity, tie handling, and offline closure. The mobile case found an ambiguous test selector (the framework also has a route-announcement alert); the selector is corrected. The full release suite, including a real ten-minute round and application restart/backup restoration, is currently running.
+
+Deployment configuration and recovery instructions are in `render.yaml` and `docs/deployment.md`. The Render integration is available but not connected, and this repository has no remote yet. No paid resources have been created and no public deployment is claimed. The hosted smoke and restart checks remain pending.
