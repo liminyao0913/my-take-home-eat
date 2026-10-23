@@ -1,92 +1,110 @@
 # Deployment and recovery
 
-Current hosting target: the existing Render service at **https://lets-eat-ba8e.onrender.com/**, selected October 23, 2026. Local/LAN access remains available for development. The [remediation spec](self-reflect-remediation-tech-spec.md) defines the next implementation; [verification](verification.md#render-baseline-and-self-review-remediation) records what has actually passed.
+The public service is [Let's Eat on Render](https://lets-eat-ba8e.onrender.com/). Local setup uses **http://localhost:3000 only**. Both use Node 24.22.1, one Next.js process, and SQLite; their databases and browser identities are separate. See [verification](verification.md) for measured release evidence and [the remediation spec](self-reflect-remediation-tech-spec.md) for limits and acceptance gates.
 
-The initial missing-schema, Origin, and build-command failures were repaired through the Render API with the user's authorization. A two-browser hosted flow now passes. API/SSH inspection confirmed one 1 CPU / 2 GiB instance in Virginia; a 1 GB persistent disk was attached at `/var/data`. The review's application hardening remains separate work; use the verification record for deadline, version, and persistence results.
+## Localhost setup
 
-## Configure the existing Render service
+On a new checkout:
 
-Use the repository at [liminyao0913/my-take-home-eat](https://github.com/liminyao0913/my-take-home-eat). The linked branch remains `master`, and remediation work is on `fix/self-reflect-render`. Automatic deployments are off. Use an explicit tested commit SHA for a manual deployment; a push to either branch does not itself deploy this service.
+```sh
+npm ci
+cp .env.example .env.local
+npm run dev
+```
 
-Set these fields separately in the service settings:
+On an existing checkout, preserve `.env.local` and set `APP_ORIGIN=http://localhost:3000` and `DATABASE_PATH=.data/lets-eat.sqlite`. Development and production startup bind to localhost, apply committed migrations, and validate configuration/schema/writability before listening. No LAN address, router change, or public IP is needed.
+
+For production mode, stop the running local process before replacing its build:
+
+```sh
+npm run db:backup -- /path/to/a-new-backup.sqlite
+npm ci
+npm run build
+npm start
+```
+
+Do not run `next build` over a live process's `.next` directory. Tests can use an isolated source/build copy. For another localhost port, set `APP_ORIGIN` to that exact origin and pass the same port to `npm start -- --port 3001`.
+
+## Render settings
+
+Use the existing service `srv-dbdq644ipgvc739okdj0`, with repository [liminyao0913/my-take-home-eat](https://github.com/liminyao0913/my-take-home-eat) and release branch `fix/self-reflect-render`. Automatic deployments stay off; push the branch and deploy a deliberately selected tested commit. This does not merge the feature branch into `master`.
 
 | Field | Value |
 | --- | --- |
-| Runtime | Node; `.node-version` pins 24.22.1 |
+| Runtime | Node 24.22.1, pinned by `.node-version` |
 | Build Command | `npm ci --include=dev && npm run build` |
 | Start Command | `npm run start:host` |
 | Health Check Path | `/api/health` |
-| Environment: `APP_ORIGIN` | `https://lets-eat-ba8e.onrender.com` |
-| Environment: `DATABASE_PATH` | `/var/data/lets-eat.sqlite` |
-| Persistent disk mount | `/var/data` |
-| Instances | 1 |
+| `APP_ORIGIN` | `https://lets-eat-ba8e.onrender.com` |
+| `DATABASE_PATH` | `/var/data/lets-eat.sqlite` |
+| Persistent disk | 1 GB, mounted at `/var/data` |
+| Compute | One `1c-2g` instance: 1 CPU / 2 GiB, Virginia |
 
-Do not put `npm run start:host` in the Build Command field: it starts the server without creating the production build. Do not use plain `npm start` as the deployment Start Command: it skips migrations. `start:host` runs committed migrations before starting Next on `0.0.0.0`; Render supplies `PORT`. Use the HTTPS origin without a trailing slash or a `:3000` suffix. [Render web service settings](https://render.com/docs/web-services).
+Build and Start are separate fields. `start:host` applies migrations, runs readiness/writability checks, and binds to `0.0.0.0` using Render's `PORT`. Local `npm start` also applies migrations, but its localhost binding is unsuitable for Render. Never put a server start command in the Build field. [Render web service settings](https://render.com/docs/web-services).
 
-`.env.local not found. Continuing without it.` is expected on Render. Configure values under Environment instead of uploading that local file. Both the Blueprint and the repaired service now set the explicit HTTPS origin above. The app does not automatically use `RENDER_EXTERNAL_URL` when `APP_ORIGIN` is absent. [Render-provided variables](https://render.com/docs/environment-variables).
+Set environment values in Render; do not upload `.env.local`. Its absence on Render is normal. Startup requires an explicit HTTPS non-local `APP_ORIGIN`, with no trailing slash or `:3000`, and an absolute `DATABASE_PATH`. It does not substitute `RENDER_EXTERNAL_URL` or silently fall back to localhost. [Render environment variables](https://render.com/docs/environment-variables).
 
-Verify a paid persistent disk is actually attached at `/var/data`; setting `DATABASE_PATH` alone does not attach storage. The checked-in [render.yaml](../render.yaml) now describes the configured `1c-2g` Virginia instance and 1 GB disk, with automatic deployments off. The existing service was updated directly, not recreated as another Blueprint service. A manually configured service does not automatically synchronize future changes to this file.
+Only an attached persistent disk provides durable storage. The directory name alone is insufficient. The disk is unavailable during build/pre-deploy, belongs to one service instance, and causes a brief deployment interruption. Keep migrations in startup and do not add replicas sharing this SQLite file. The [Blueprint](../render.yaml) records the settings; a manually configured service does not automatically synchronize Blueprint edits. [Render disks](https://render.com/docs/disks).
 
-Only files under the disk mount survive redeploys. The disk is unavailable to builds/pre-deploy commands, so migrations belong in startup. One instance owns it, and deployments briefly interrupt service. [Render persistent disks](https://render.com/docs/disks). A free/ephemeral deployment can demonstrate the UI but is not the durable SQLite deployment described here.
+## Readiness and release identity
 
-## Recover the observed deployment
+```sh
+curl --fail-with-body https://lets-eat-ba8e.onrender.com/api/health
+curl --fail-with-body https://lets-eat-ba8e.onrender.com/api/profile
+curl --fail-with-body https://lets-eat-ba8e.onrender.com/api/version
+```
 
-1. Check the current `DATABASE_PATH` and disk mount in the runtime environment. Preserve any existing database and take a consistent backup before changing its path or migrating it. Creating a new empty database would not migrate old meals automatically.
-2. Correct the Build/Start fields and environment values above, then redeploy. Verify build output includes a successful `next build` and runtime logs show `Database migrations applied.` before Next is ready.
-3. Confirm these read-only checks:
+Health returns `{"status":"ok"}` only when required migrations, schema, indexes, and a cheap database read succeed. It never migrates, prunes profiles, or finalizes rooms. A homepage 200 alone does not establish readiness. Startup additionally verifies write access with a rolled-back transaction and logs a sanitized record containing origin, schema version, and release commit.
 
-   ```sh
-   curl --fail-with-body https://lets-eat-ba8e.onrender.com/api/health
-   curl --fail-with-body https://lets-eat-ba8e.onrender.com/api/profile
-   ```
-
-   Expect health `{"status":"ok"}` and an anonymous profile response with HTTP 200. A homepage 200 alone is insufficient.
-4. Create one labeled test room in a fresh browser, join from another browser, vote, and finish early. Confirm the invite uses the HTTPS hostname and both people see the same result.
-5. Complete the real-deadline and restart/persistence gates below before calling the deployment verified.
+The header links to `/api/version`: package version and `RENDER_GIT_COMMIT`, or `null` in a normal local run. It works independently of SQLite. Request logs contain route templates, status, duration, error code, and generated request IDs; they exclude room links, cookies, bodies, and preferences. HTTP lock contention returns 503 with `Retry-After: 1` after the 100 ms busy budget.
 
 | Symptom | Check |
 | --- | --- |
-| `Could not find a production build in .next` | Build must run `npm run build`; start must be a separate phase. |
-| `no such table: profiles` or health 503 | Runtime migrations must use the server's actual database path; inspect startup errors and mount permissions. Migrations run during build do not prove runtime schema exists. |
-| `WRONG_ORIGIN` on create | Compare the browser's origin to `APP_ORIGIN` exactly, including scheme and any port; redeploy after fixing it. Do not disable the Origin check. |
-| Meals disappear after redeploy | Confirm the file lives under an attached persistent mount. A writable directory alone may be ephemeral. |
+| Production build missing | Build with `npm run build`; start in a separate phase. |
+| Health 503 or missing `profiles` | Check runtime migration logs, database path, persistent mount, and permissions. |
+| `CONFIG_INVALID` | Use an exact origin and explicit persistent SQLite path on Render. |
+| `WRONG_ORIGIN` | Browser origin must exactly equal `APP_ORIGIN`; retain the Origin check. |
+| 413 / 408 / 429 | Request too large, upload timed out, or temporary admission budget exhausted; use the message/Retry-After. |
+| Capacity 409 | Follow the room/round/participant limit message; expired rounds do not consume open-room admission. |
+| Lost meals after redeploy | Verify the attached mount and database path before creating any replacement file. |
 
-Health currently checks only the `rooms` table. Even after it returns 200, also check the profile endpoint; review F5 strengthens readiness to verify all required schema. [Render health-check setup](https://render.com/docs/health-checks).
+## Backups, disk monitoring, and recovery
 
-## Resource and operating baseline
-
-Keep one app process and SQLite. The confirmed allocation is 1 CPU / 2 GiB RAM with a 1 GB disk; use those limits when interpreting capacity numbers. The review's 100-group test ran on a much larger local machine; the initial Render target is 20 groups of eight and must be measured under the actual allocation. See the spec for latency/memory targets, quotas, and an isolated load-test procedure.
-
-Use Render logs/metrics for errors, restarts, memory, CPU, and disk growth. Record the deployed commit with each release. The header version link and `/api/version` identify the package version and serving Git commit without touching SQLite. Take backups daily and before schema changes, retain at least seven daily copies outside the service, and verify a restore periodically. This is the operating policy to set up, not a claim that a backup schedule already exists. A Render cron service cannot directly mount this service's disk; run the backup on the owning service through an operator or external scheduler, then transfer the file off-host.
-
-## Back up before schema changes
-
-In the running service's shell, choose a new filename under the persistent mount:
+Before a schema change, take a new consistent backup and copy it off-host. The backup command includes committed WAL data:
 
 ```sh
 npm run db:backup -- /var/data/lets-eat-before-migration.sqlite
 ```
 
-Copy that backup off the service using Render's file-transfer facilities. The command uses SQLite's backup API, including committed WAL data. Do not copy only the live main SQLite file, and do not overwrite the only known-good backup. Keep sufficient free disk space for the temporary copy. Protect backups like the original database: they contain private preferences and credential hashes.
+Run that command in the owning Render service's shell, then transfer the file through Render SSH/SFTP. Never copy only a live main SQLite file, overwrite the sole good backup, or restore over an open database. Protect backups as private data.
 
-LAN data and Render data are separate. Sharing a repository does not copy the LAN database, and browser cookies do not move between hostnames. Any transfer of real meal data is a separate deliberate migration using a verified backup; no transfer was performed in this documentation change.
-
-## Verify a backup without replacing production
-
-Copy the backup to a separate writable local directory, use a compatible application version, and run:
+An external backup command automates the SSH backup, off-host transfer, SHA-256 comparison, SQLite integrity/foreign-key checks, and retention of the latest **seven distinct daily copies**:
 
 ```sh
-DATABASE_PATH=/path/to/restored.sqlite APP_ORIGIN=http://localhost:3001 npm run db:migrate
-DATABASE_PATH=/path/to/restored.sqlite APP_ORIGIN=http://localhost:3001 npm run start -- --port 3001
+RENDER_SSH_HOST=srv-dbdq644ipgvc739okdj0@ssh.virginia.render.com npm run db:backup:render
 ```
 
-Visit a known room path and verify the result and shared inputs. Personal access also requires the corresponding test browser credential; a public result alone does not prove identity restoration. The isolated local browser suite covers both backup restoration and remembered browser identity.
+It requires the operator's existing Render SSH access and verified host key. It does not copy private SSH keys into Render or bypass host verification. Backups default to `.data/backups/render/` (directory 0700, files 0600). A successful rerun on the same UTC date keeps that day's verified copy. Temporary remote copies are removed after transfer; production data is untouched.
 
-For production recovery, stop the app first, preserve the existing database and its `-wal`/`-shm` companions separately, and install a verified backup as a new file. Point `DATABASE_PATH` to that new file before starting. Never restore over an open database. Use a schema-compatible application version: an application rollback does not reverse migrations. Record the backup time and any writes that recovery would lose.
+On the current operator machine, `lets-eat-render-backup.timer` is enabled for **04:15 America/Los_Angeles daily**, with persistent catch-up and user lingering enabled. Its service uses the pinned Node binary in `~/.local/share/lets-eat/node24/bin/node` and this checkout's backup script. The first off-host backup was verified October 23; seven daily copies accumulate over subsequent days. The machine must be powered and network-connected; missed schedules run when it returns, without inventing backups for missed days.
+
+```sh
+systemctl --user list-timers lets-eat-render-backup.timer
+systemctl --user status lets-eat-render-backup.service
+journalctl --user -u lets-eat-render-backup.service
+```
+
+The backup job measures Render disk usage, records **warning at 70% / critical at 85%**, and returns a nonzero scheduler status at either threshold. It checks available headroom before making a temporary copy. Review those logs and Render CPU/memory/disk metrics; allow room for WAL, migrations, and backup copies. No email sender is required.
+
+Verify a restore in a separate writable directory using a compatible application build:
+
+```sh
+DATABASE_PATH=/path/to/restored.sqlite APP_ORIGIN=http://localhost:3001 npm start -- --port 3001
+```
+
+Check a known shared room, result, and corresponding test browser's identity/defaults/history. The local release tests exercise application restart and backup restoration. For real recovery, stop the service, preserve its current database/WAL/SHM, restore a verified backup into a new file, and point `DATABASE_PATH` to it before restarting. Application rollback does not reverse migrations; record the backup time and writes that recovery would lose.
 
 ## Local and hosted release checks
-
-Run against an isolated local database, using the pinned Node version:
 
 ```sh
 npm run lint
@@ -95,19 +113,39 @@ npm run test:unit
 npm run test:integration
 npm run build
 npx playwright install chromium
-npm run test:e2e:release
+npm run test:e2e
+npm run test:e2e:release -- --grep 'unaccelerated ten-minute'
 ```
 
-Do not rebuild `.next` underneath a running local production server; use a separate checkout or stop/restart it deliberately. Browser reports are in `playwright-report/` and `test-results/`. The GitHub workflow can include the actual ten-minute case through its `real_deadline` input.
+The local suite owns localhost ports 3100/3101 and temporary databases. It includes real HTTP upload/collection races and a P1 three-browser group journey. Fixtures refuse non-test database paths. Do not redirect this suite to Render.
 
-The existing browser suite starts ports 3100/3101 and uses temporary SQLite files; its helpers may edit test deadlines. It is **not** a hosted test runner and must not be redirected wholesale to production. The separate hosted suite is specified, not implemented yet.
+The separate hosted suite requires an explicit HTTPS target and starts no server or SQLite fixture:
 
-At the Render URL, use independent browser sessions and labeled test rooms for create/join/vote/preferences, copy-link, early results, personal history, mobile, and reload continuity. Also wait through one real ten-minute round without modifying its deadline. Keep abuse, load, migration, and restore probes on an isolated environment.
+```sh
+HOSTED_BASE_URL=https://lets-eat-ba8e.onrender.com HOSTED_ARTIFACT_DIR=.data/hosted/release npm run test:hosted
+HOSTED_BASE_URL=https://lets-eat-ba8e.onrender.com HOSTED_ARTIFACT_DIR=.data/hosted/release RUN_HOSTED_DEADLINE=1 HOSTED_DEADLINE_ONLY=1 npm run test:hosted
+```
 
-To prove persistence, record a test-room URL and keep the test browser storage, perform a planned restart/redeploy, then reopen it and compare the inputs, identity, history, and frozen result. Low-volume public HTTP testing cannot verify the disk mount or perform this restart by itself. There is no public room-deletion API: shared smoke rooms remain until a separately scoped maintenance cleanup. Cookie-bearing traces/storage remain private, outside Git.
+Readiness, profile, redirect, headers, and commit checks run before stateful tests. Regular hosted checks use labeled rooms and independent browser contexts for copied invites, contributions, private preferences, readiness/results, history/recommendations, and P1 late-arrival/close-versus-vote behavior. The deadline case waits a real ten minutes with no database or clock edits. Set `EXPECTED_COMMIT` when verifying a specific deploy.
 
-## Local/LAN operation
+After a deliberate Render restart/redeploy, reuse the same artifact directory:
 
-For local development, use the [README](../README.md#run-locally). The previously running LAN service uses `http://192.168.86.52:3000` and its own ignored `.env.local`; this documentation change does not alter it. For a local production start, build with Node 24, set the exact LAN `APP_ORIGIN`, then run `npm run start:host`. Use the backup procedure above with a local destination before replacing the database or applying schema changes.
+```sh
+HOSTED_BASE_URL=https://lets-eat-ba8e.onrender.com HOSTED_ARTIFACT_DIR=.data/hosted/release HOSTED_RESUME=1 npm run test:hosted
+```
 
-Render is now the selected public hosting path. Do not substitute the old raw public HTTP address in invites for this release.
+Saved browser states prove continuity of identities, private inputs, history, recommendations, and the frozen result. Artifacts contain credentials and private room identifiers: keep the directory private and out of Git. Hosted test rooms remain in shared history; forgetting is not a delete-room operation.
+
+For capacity, use an already-built checkout and Linux systemd user services:
+
+```sh
+npm run test:capacity
+# Or keep the running local build intact:
+CAPACITY_BUILD_DIR=/path/to/isolated/built/checkout npm run test:capacity
+```
+
+This runner creates its own localhost:3200 process and temporary SQLite file, verifies enforced 1 CPU / 2 GiB limits, and runs 20 groups of eight with three-second polling for ten minutes. It records requests, latency, accepted writes, health, CPU/RSS/event-loop delay, DB/WAL size, restart/OOM state, and a simultaneous-deadline burst. It stops the temporary service and removes its database afterward. Memory comparisons exclude the first two minutes and allow 16 MiB of GC/runtime variation between steady-window medians; inspect the full samples for a sustained trend. The evidence describes a constrained local service, not Render network or disk performance. Actual Render behavior is verified separately through the public URL; never run this load/abuse script against the live service.
+
+## Dependency maintenance
+
+Next.js and eslint-config-next are 16.4.3. The production audit reports zero advisories. The full audit still has four moderate entries for one development-only esbuild advisory through stable drizzle-kit 0.31.11; no affected esbuild development server is used here. Track the [upstream loader issue](https://github.com/drizzle-team/drizzle-orm/issues/5304) and [maintainer advisory](https://github.com/evanw/esbuild/security/advisories/GHSA-67mh-4wv8-2f99). Do not apply npm's suggested downgrade to drizzle-kit 0.18.1. Migration generation and populated migration tests must pass after any toolchain update. Native SQLite is checked separately from npm audit.

@@ -2,6 +2,8 @@
 
 Status: product proposal, October 22, 2026. The user confirmed that **meals soon** remain the main flow and chose to **drop email notifications** because they require a sending service and sender setup. Other recommendations below are discussion defaults, not implemented features.
 
+Scope note, October 23: this brainstorming plan remains deferred. Browser defaults/history/recommendations were delivered through the separate [identity extension](identity-and-history-plan.md); recent meals, participation counts, early finish, and repeat rounds were implemented elsewhere. Its older cookie-lifetime and “future” statements are historical proposals, not current behavior. Discovery, notifications, and copying whole rooms remain out of scope.
+
 The [v1 plan](plan.md) describes the current product. This proposal extends it while keeping one shared link, no accounts, small groups of 3–8, a ten-minute decision window, and SQLite.
 
 ## 1. Recommended direction

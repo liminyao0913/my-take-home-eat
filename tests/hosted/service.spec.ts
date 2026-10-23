@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext, type BrowserContext, type Page } 
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { HistoryPage, ProfileSnapshot, RoomSnapshot, Suggestions } from "../../src/lib/contracts";
+import { verifyGroupFlow } from "../browser/group-flow";
 
 const origin = new URL(process.env.HOSTED_BASE_URL!).origin;
 const headers = { Origin: origin };
@@ -64,6 +65,7 @@ test("hosted smoke: two browsers decide, remember preferences, and reuse the res
     await page.getByRole("button", { name: "Create a meal room", exact: true }).click();
     await expect(page).toHaveURL(/\/r\/[\w-]+$/);
     const invite = page.url(); const id = new URL(invite).pathname.split("/").at(-1)!;
+    await page.bringToFront();
     await page.getByRole("button", { name: "Copy invite link", exact: true }).click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(invite);
     await other.goto(invite);
@@ -102,6 +104,11 @@ test("hosted smoke: two browsers decide, remember preferences, and reuse the res
     await page.screenshot({ path: path("returning-browser.png"), fullPage: true });
     expect(errors).toEqual([]);
   } finally { await owner.close(); await guest.close(); }
+});
+
+test("P1 hosted: three independent browsers validate the defining group interaction", async ({ browser }) => {
+  test.skip(process.env.HOSTED_RESUME === "1" || process.env.HOSTED_DEADLINE_ONLY === "1");
+  record("p1-validation.json", await verifyGroupFlow(browser, origin, (page, name) => page.screenshot({ path: path(name), fullPage: true })));
 });
 
 test("hosted release: an actual ten-minute deadline gives both browsers the same result", async ({ browser }) => {

@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-23T20:14:57.731Z",
+  "commit": "c2f3c0175897de43e56470e081d2d006694195e5",
+  "groups": 20,
+  "participants": 160,
+  "durationSeconds": 600,
+  "resources": {
+    "cpuMax": "100000 100000",
+    "memoryMax": 2147483648,
+    "memoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+    "service": "MainPID=21732\nNRestarts=0\n"
+  },
+  "requests": {
+    "setup": {
+      "count": 500,
+      "p50Ms": 5.959,
+      "p95Ms": 8.722,
+      "p99Ms": 12.059,
+      "maxMs": 57.642
+    },
+    "ordinary": {
+      "count": 33560,
+      "p50Ms": 2.698,
+      "p95Ms": 4.177,
+      "p99Ms": 71.949,
+      "maxMs": 128.978
+    },
+    "deadline": {
+      "count": 160,
+      "p50Ms": 159.511,
+      "p95Ms": 242.606,
+      "p99Ms": 247.758,
+      "maxMs": 254.559
+    },
+    "health": {
+      "count": 60,
+      "p50Ms": 1.574,
+      "p95Ms": 4.608,
+      "p99Ms": 121.638,
+      "maxMs": 121.638
+    }
+  },
+  "statuses": {
+    "200": 34260,
+    "201": 20
+  },
+  "acceptedWrites": 2040,
+  "lostWrites": 0,
+  "missedPolls": 0,
+  "errors": [],
+  "runtime": {
+    "steadyRssMax": 232632320,
+    "earlySteadyRssMedian": 219279360,
+    "lateSteadyRssMedian": 222695424,
+    "eventLoopP95Ms": 22.953983,
+    "eventLoopMaxMs": 189.399039,
+    "cpuP95Percent": 18.87742,
+    "databaseBytes": 327680,
+    "walBytes": 4157112
+  },
+  "passed": true,
+  "environment": "Disposable localhost systemd service; enforced 1 CPU / 2 GiB, separate from live Render",
+  "limitations": "Measures application work under matching compute limits; it does not measure Render network or persistent-disk performance."
+}

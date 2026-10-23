@@ -22,7 +22,8 @@
     "prestart": "npm run db:migrate && npm run check:startup",
     "check:startup": "node --env-file-if-exists=.env.local scripts/check-startup.mjs",
     "test:hosted": "playwright test --config playwright.hosted.config.ts",
-    "test:capacity": "node scripts/capacity.mjs"
+    "test:capacity": "node scripts/capacity.mjs",
+    "db:backup:render": "node scripts/render-backup.mjs"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",

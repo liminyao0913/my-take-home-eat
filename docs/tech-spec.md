@@ -4,7 +4,7 @@ Status: implementation specification. Current progress and verification results 
 
 Identity/history extension: [the separate implementation spec](identity-and-history-tech-spec.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and creator suggestions. Its credential lifecycle and private APIs supersede the original guest-only behavior below; group voting rules remain the same.
 
-Delivery update, October 23: the user selected **Render** at `https://lets-eat-ba8e.onrender.com`. Configuration was repaired, and hosted core flows, a real ten-minute deadline, version reporting, and redeploy persistence passed; see [verification](verification.md). The [remediation spec](self-reflect-remediation-tech-spec.md) defines the remaining fixes and resource gates, and the [deployment guide](deployment.md) gives the exact settings.
+Delivery update, October 23: the user selected **Render** at `https://lets-eat-ba8e.onrender.com`. Configuration was repaired, and hosted core flows, a real ten-minute deadline, version reporting, and redeploy persistence passed; see [verification](verification.md). The [remediation spec](self-reflect-remediation-tech-spec.md) records the implemented fixes and release resource gates, and the [deployment guide](deployment.md) gives the exact settings.
 
 ## 1. What we need and what we choose
 
@@ -26,7 +26,7 @@ Build **one full-stack TypeScript application backed by a SQLite file**. UI, bac
 
 Next.js supports custom HTTP endpoints through [Route Handlers](https://nextjs.org/docs/app/getting-started/route-handlers) and deployment as a [Node.js server](https://nextjs.org/docs/app/getting-started/deploying). Drizzle supports the [better-sqlite3 driver](https://orm.drizzle.team/docs/sqlite/get-started-sqlite).
 
-Use stable package releases compatible with this stack, record the exact resolved versions in the lockfile, and avoid prereleases. Node 24 is an [LTS release](https://nodejs.org/en/about/previous-releases); the existing workspace has Node 18.19.1 and must be upgraded before building. Current [Next.js installation requirements](https://nextjs.org/docs/app/getting-started/installation) exceed that installed version.
+Use stable package releases compatible with this stack, record the exact resolved versions in the lockfile, and avoid prereleases. Node 24 is an [LTS release](https://nodejs.org/en/about/previous-releases); use the pinned Node 24.22.1 runtime before installing or building; a shell still using Node 18 is unsupported. Current [Next.js installation requirements](https://nextjs.org/docs/app/getting-started/installation) exceed that installed version.
 
 Render's persistent disks require a paid service, support one service instance, and are available at runtime rather than during builds. Those constraints fit this deployment choice; local development needs only Node and a writable directory. See [Render persistent disks](https://render.com/docs/disks).
 
@@ -68,6 +68,8 @@ tests/
   unit/
   integration/
   e2e/
+  browser/                     # Shared public group-flow validation
+  hosted/                      # Public HTTPS checks without local fixtures
 ~~~
 
 Route Handlers parse requests and map errors to HTTP responses. The room service owns authorization, persistence, and deadline checks. The decision function takes a snapshot and returns a result without accessing the database or clock.
@@ -112,7 +114,7 @@ The cookie supports participation in several rooms and now links to a browser pr
 
 Generate room IDs from at least 128 random bits and use them directly in /r/[roomId]. Anyone holding that link can view and join, as specified in the product plan.
 
-All writes check the request Origin against APP_ORIGIN and require an active participant except for create and join. Only an option's author may remove it. Scoped lookups must verify that both the participant and option belong to the requested room.
+All writes check the request Origin against APP_ORIGIN. Body-bearing routes enforce upload and admission limits and validate input before resolving identity. Every mutation rechecks credential expiry/revocation after obtaining the SQLite write lock; room contribution requires an active participant except for create/join. Only an option's author may remove it. Scoped lookups must verify that both the participant and option belong to the requested room.
 
 ## 5. Database model and storage
 
@@ -137,16 +139,16 @@ Store the final result as a structured JSON snapshot: winner ID and meal details
 - Development path: .data/lets-eat.sqlite, ignored by Git.
 - Production path: /var/data/lets-eat.sqlite on the persistent disk.
 - Tests: a fresh temporary directory and SQLite file, isolated from both.
-- Initialize connections with foreign_keys=ON, journal_mode=WAL, synchronous=FULL, and a 5,000 ms busy timeout.
+- Initialize connections with foreign_keys=ON, journal_mode=WAL, synchronous=FULL, and a 100 ms HTTP busy timeout. Lock contention returns 503 with `Retry-After: 1`; migration/backup connections have separate timeouts.
 - Reuse a server connection; avoid creating a new connection for each query.
-- Generate and commit migrations, then apply them through scripts/migrate.mjs. For table rebuilds it disables foreign keys before the migrator transaction, then enables and checks them afterward. Migration 0001 also preserves the option autoincrement high-water mark; a populated original-schema migration test checks votes, identities, preferences, frozen results, and ID continuity. Lazy connection initialization prevents the build from creating or migrating a database.
+- Generate and commit migrations, then apply them through scripts/migrate.mjs. Both local startup and Render startup run migration and rollback-write readiness checks first. For table rebuilds it disables foreign keys before the migrator transaction, then enables and checks them afterward. Migration 0001 also preserves the option autoincrement high-water mark; a populated original-schema migration test checks votes, identities, preferences, frozen results, and ID continuity. Lazy connection initialization prevents the build from creating or migrating a database.
 - Keep transactions short and synchronous. Perform request parsing and any asynchronous work before entering a better-sqlite3 transaction.
 
 SQLite permits one writer at a time. WAL allows concurrent readers, but the database and its WAL files must stay on the same host. This app deliberately runs as one service instance. See [SQLite transactions](https://sqlite.org/lang_transaction.html) and [WAL behavior](https://sqlite.org/wal.html).
 
 ## 6. API contract
 
-All endpoints use JSON. Successful room mutations return the updated snapshot, including deletions. Response objects expose explicit public fields rather than serializing database rows.
+All endpoints use JSON. Successful room mutations return the updated snapshot, including deletions. Response objects expose explicit public fields rather than serializing database rows. Uploads are limited to 128 KiB and ten seconds, with at most 32 incomplete readers. Room limits are 20 current options, 32 distinct participants, 100 rounds, 100 concurrently open rounds, and 10,000 stored rooms. Single-process token buckets bound request/create rates; capacity checks are transactional and durable. Full limits and legacy-data preservation rules are in the remediation spec.
 
 | Method and route | Input / effect |
 | --- | --- |
@@ -160,11 +162,12 @@ All endpoints use JSON. Successful room mutations return the updated snapshot, i
 | DELETE /api/rooms/:roomId/participants/me | Leave and clear the caller's decision inputs. |
 | PUT /api/rooms/:roomId/participants/me/ready | Set the caller’s ready boolean; no automatic closure. |
 | POST /api/rooms/:roomId/finish | Require at least one option and all active participants ready; finalize immediately. |
+| GET /api/rooms/:roomId/rounds?beforeRound=… | Up to ten archived outcomes, with an exclusive round cursor. |
 | POST /api/rooms/:roomId/rounds | After closure/expiry, supply a meal date and at least one new option. Archive the old result, clear options/responses/readiness, retain people/preferences, increment round, and start a fresh deadline atomically. |
-| GET /api/health | Currently checks access to the `rooms` table. Complete migration/schema readiness is required by remediation F5 but not yet implemented; expose no private data. |
+| GET /api/health | Read-only verification of required migrations, tables/columns, indexes, and a cheap database read; 200 when ready or 503 without SQL/path details. |
 | GET /api/version | Uncached package version and full deployed Git commit, or null when unavailable. Independent of database readiness; the shared header links here. |
 
-The room snapshot contains room metadata, serverNow, state, active participant names and responded/ready flags, option details and aggregate vote/reason counts, result, previousRounds, and an optional me object. Only me contains private preferences and the caller’s own choices and reason tags. A participant counts as responded when they have a response, saved preferences, or readiness; the flag does not imply approval. Set Cache-Control: private, no-store on room responses and disable fetch caching.
+The room snapshot contains room metadata, serverNow, state, active participant names and responded/ready flags, option details and aggregate vote/reason counts, result, archiveCount, and an optional me object. Archived outcomes are fetched separately on demand. Only me contains private preferences and the caller’s own choices and reason tags. A participant counts as responded when they have a response, saved preferences, or readiness; the flag does not imply approval. Set Cache-Control: private, no-store on room responses and disable fetch caching.
 
 Use 400 for invalid input, 401 for missing participation identity, 403 for a forbidden ownership action, 404 for a missing or incorrectly scoped resource, and 409 ROOM_CLOSED for contributions rejected after closure. Round-scoped writes carry X-Room-Round (legacy requests default to 1); a mismatch returns 409 STALE_ROUND. An early finish with unready participants returns 409 NOT_READY, and without options returns 409 NO_OPTIONS. Restarting an open round returns 409 ROUND_OPEN. Return a stable error code, a useful message, and field errors where appropriate.
 
@@ -228,7 +231,7 @@ Record whether votes won outright, preferences broke a vote tie, preferences sel
 
 ### Local development
 
-Upgrade the workspace to Node 24 and pin it in the repository runtime configuration. Install dependencies, copy .env.example, apply migrations, and run the development server. SQLite does not require Docker, a database daemon, or the sqlite3 CLI.
+Use the pinned Node 24.22.1 runtime, install dependencies, and preserve existing `.env.local` values. Local commands bind to localhost; use `APP_ORIGIN=http://localhost:3000`. Development and production startup apply migrations and readiness checks automatically. SQLite does not require Docker, a database daemon, or the sqlite3 CLI.
 
 Environment variables:
 

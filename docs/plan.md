@@ -2,7 +2,7 @@
 
 Status: product baseline updated for the [UX review](feedback/REVIEW.md), including early completion, repeat rounds, simpler setup, and an instant demo. Implementation choices are in [the technical spec](tech-spec.md).
 
-The implemented [identity/history extension](identity-and-history-plan.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and suggestions. The broader [next feature plan](next-features-plan.md) remains deferred; its brainstorming is not the current delivery checklist. The next work is [self-review remediation for Render](self-reflect-remediation-tech-spec.md), preserving the meal decision rules below.
+The implemented [identity/history extension](identity-and-history-plan.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and suggestions. The broader [next feature plan](next-features-plan.md) remains deferred; its brainstorming is not the current delivery checklist. Security and capacity boundaries are specified in [self-review remediation for Render](self-reflect-remediation-tech-spec.md), preserving the meal decision rules below.
 
 ## 1. Product and audience
 
@@ -109,7 +109,7 @@ Anyone can add an option containing:
 
 Unspecified cuisine and price remain unknown and earn no confirmed match for a supplied preference in that dimension. “Other” is a valid cuisine tag. Entry is manual; no restaurant lookup is required.
 
-Once submitted, option details are fixed. Before the deadline, the author can remove their own option and add a corrected one. Removing it discards its votes and flags; a replacement starts fresh. This avoids editing a meal that people have already approved. Encourage three to five options. The original implementation has no option cap; the remediation spec proposes resource limits for public hosting. Duplicate detection remains deferred.
+Once submitted, option details are fixed. Before the deadline, the author can remove their own option and add a corrected one. Removing it discards its votes and flags; a replacement starts fresh. This avoids editing a meal that people have already approved. Encourage three to five options. Each round now allows up to 20 current options; rooms allow 32 participant identities and 100 rounds. Rejoining an existing identity remains possible at the participant limit. Duplicate detection remains deferred.
 
 ### Personal preferences
 

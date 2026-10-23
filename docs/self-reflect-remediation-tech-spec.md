@@ -4,7 +4,7 @@ Status: implementation authorized and in progress, October 23, 2026. Work branch
 
 The user has selected Render at **https://lets-eat-ba8e.onrender.com/**. This supersedes the earlier LAN-only delivery decision. Keep localhost development, SQLite, automatic browser identity, and the existing voting rules. Do not add accounts, email, Google discovery, notifications, PostgreSQL, Redis, or a separate backend.
 
-Implementation checkpoint: bounded uploads and admission, transactional room limits, transaction-time credential checks, read-only identity lookup, bounded background expiry cleanup, and a 100 ms HTTP SQLite busy timeout are implemented. All 74 unit/integration tests, TypeScript, and ESLint pass locally. Regressions cover delayed uploads after forgetting, expiry across an external write lock, read availability during contention, participant churn, oversized legacy rounds, and bounded cleanup. Bounded history, startup readiness, headers/logging, dependency review, and the regular browser scenarios are also implemented and locally verified. Capacity measurements, real-deadline release checks, final documentation reconciliation, and hosted verification remain pending. This is not a release-completion claim.
+Implementation checkpoint: bounded uploads and admission, transactional room limits, transaction-time credential checks, read-only identity lookup, bounded background expiry cleanup, and a 100 ms HTTP SQLite busy timeout are implemented. All 76 unit/integration tests, TypeScript, and ESLint pass locally. Regressions cover delayed uploads after forgetting, expiry across an external write lock, read availability during contention, participant churn, oversized legacy rounds, and bounded cleanup. Bounded history, startup readiness, headers/logging, dependency review, and the regular browser scenarios are also implemented and locally verified. The constrained 20-group capacity gate and P1 three-browser local validation also pass. Real-deadline release checks, final documentation reconciliation, and hosted verification remain pending. This is not a release-completion claim.
 
 ## 1. Deployment baseline and immediate recovery
 
@@ -123,7 +123,7 @@ Update Next.js and eslint-config-next together to the compatible patch identifie
 
 The current Playwright configuration starts localhost:3100 with a temporary database. Several helpers edit deadlines in that local file; restart/restore tests also control a local process. **Changing its baseURL to Render would be incorrect.**
 
-Keep that suite for decision, race, migration, ownership, abuse, and persistence checks. Add a separate `tests/hosted` suite/config during implementation with a required `HOSTED_BASE_URL`, no `webServer`, no SQLite/process-control imports, one worker, and isolated browser contexts. Fail rather than fall back to localhost when the URL is missing. A proposed `npm run test:hosted` command is not available yet.
+Keep that suite for decision, race, migration, ownership, abuse, and persistence checks. Add a separate `tests/hosted` suite/config during implementation with a required `HOSTED_BASE_URL`, no `webServer`, no SQLite/process-control imports, one worker, and isolated browser contexts. Fail rather than fall back to localhost when the URL is missing. `npm run test:hosted` is now implemented in `playwright.hosted.config.ts` with the required public-only boundary.
 
 Hosted smoke is low volume and uses only clearly named disposable rooms through normal APIs:
 

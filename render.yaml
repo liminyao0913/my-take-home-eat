@@ -4,7 +4,7 @@ services:
     runtime: node
     region: virginia
     plan: 1c-2g
-    branch: master
+    branch: fix/self-reflect-render
     numInstances: 1
     autoDeployTrigger: "off"
     buildCommand: npm ci --include=dev && npm run build

@@ -276,4 +276,23 @@ describe("real SQLite room service", () => {
     })();
     expect(() => service.create("alex", input)).toThrowError(expect.objectContaining({ code: "ROOM_LIMIT" }));
   });
+
+  it.each(["finish-first", "vote-first"])("keeps close-versus-vote atomic when %s acquires the transaction first", (order) => {
+    const { id } = service.create("alex", input);
+    service.join(id, "sam", { displayName: "Sam" }); service.join(id, "lee", { displayName: "Lee" });
+    const [winner, alternate] = service.get(id, "alex").options;
+    for (const person of ["alex", "sam", "lee"]) { service.respond(id, person, winner.id, { choice: "approve" }); service.setReady(id, person, { ready: true }); }
+    if (order === "finish-first") {
+      service.finish(id, "alex");
+      expect(() => service.respond(id, "lee", alternate.id, { choice: "approve" })).toThrowError(expect.objectContaining({ code: "ROOM_CLOSED" }));
+    } else {
+      service.respond(id, "lee", alternate.id, { choice: "approve" });
+      expect(() => service.finish(id, "alex")).toThrowError(expect.objectContaining({ code: "NOT_READY" }));
+      expect(service.get(id, "lee").me?.ready).toBe(false);
+      service.setReady(id, "lee", { ready: true }); service.finish(id, "alex");
+    }
+    const closed = service.get(id, "lee");
+    expect(closed.result).toMatchObject({ winner: { id: winner.id, approvalCount: 3 }, closedEarly: true });
+    expect(closed.options[1].approvalCount).toBe(order === "vote-first" ? 1 : 0);
+  });
 });
