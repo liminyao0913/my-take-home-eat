@@ -165,6 +165,29 @@ test("mobile keyboard flow, inline validation, and a copyable result", async ({ 
   await page.screenshot({ path: testInfo.outputPath("mobile-result.png"), fullPage: true });
 });
 
+for (const clipboard of ["unavailable", "denied"] as const) {
+  test(`one click copies the full invite link when the clipboard API is ${clipboard}`, async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    const url = await createRoom(page, false);
+    await page.evaluate((mode) => {
+      Object.defineProperty(navigator, "clipboard", { value: mode === "unavailable" ? undefined : {
+        writeText: () => Promise.reject(new DOMException("Clipboard access denied", "NotAllowedError")),
+      } });
+    }, clipboard);
+    await page.getByRole("button", { name: "Copy invite link" }).click();
+    await expect(page.getByRole("button", { name: "Copied ✓" })).toBeVisible();
+    await expect(page.getByLabel("Select and copy")).toHaveCount(0);
+    await expect(page.locator("textarea")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Copied ✓" })).toBeFocused();
+    const reader = await context.newPage();
+    try {
+      await reader.goto("/");
+      await reader.bringToFront();
+      expect(await reader.evaluate(() => navigator.clipboard.readText())).toBe(url);
+    } finally { await reader.close(); }
+  });
+}
+
 test("a network failure preserves the preference draft until a successful retry", async ({ page, context }) => {
   await createRoom(page);
   await page.getByText("My preferences", { exact: false }).click();

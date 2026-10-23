@@ -144,8 +144,6 @@ input[aria-invalid=true], select[aria-invalid=true] { border-color: #ae422c; }
 .no-winner { background: #f5ecdf; border-color: #dfcfb5; }
 .empty-state { text-align: center; color: var(--muted); padding: 40px 25px; }
 .copy-control { flex-shrink: 0; max-width: 100%; }
-.copy-fallback { display: block; max-width: 300px; margin-top: 10px; font-size: 12px; }
-.copy-fallback textarea { height: 100px; }
 @media (max-width: 1000px) {
   .landing { gap: 35px; grid-template-columns: .8fr 1.2fr; }
   .intro h1 { font-size: 47px; }

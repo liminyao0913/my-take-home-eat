@@ -16,6 +16,7 @@ Verified on October 22, 2026 using Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.
 | Render Blueprint | Validated against Render's official JSON Schema. No deployment performed. |
 | LAN access configuration | Reproduced the localhost/LAN origin mismatch, set the browser-facing origin, and verified room creation, joining, and voting through the LAN address. Unrelated origins still receive 403. |
 | Public address configuration | Set `APP_ORIGIN=http://24.130.34.221:3000` and restarted the app on port 3000. Playwright on the app host verified creation, the public invite URL and HTTP copy fallback, joining, vote propagation, and identity/preferences after reload through that URL. Unrelated origins still receive 403. Removed only the temporary verification room. |
+| Copy button fix | Reproduced the manual selection field before the fix. Clipboard regressions for unavailable and denied Clipboard API access, plus the existing mobile meal-summary journey, passed. All read actual clipboard contents. Type checking, lint, and a fresh production build passed. After restart, verified that one click on the public HTTP site copies the entire invite URL, shows “Copied ✓”, restores focus, and leaves no text field. |
 
 The full-duration browser test used two isolated browser sessions, retained the original ten-minute deadline, and confirmed that the saved closing time equals that deadline. It did not alter the database deadline or mock the clock. Routine browser cases accelerate only their own room in an isolated test SQLite file; the application has no deadline-changing endpoint.
 
@@ -24,7 +25,7 @@ Browser journeys cover concurrent votes from separate people, preference-only de
 Local evidence:
 
 - Full-duration release report: `.data/release-report/index.html` (preserved from the actual release run).
-- Latest regular-suite report: `playwright-report/index.html`.
+- Latest copy regression report (three targeted browser cases): `playwright-report/index.html`.
 - Browser screenshots and failure traces: `test-results/`.
 
 Use `npx playwright show-report .data/release-report` or `npx playwright show-report` to view the reports. These generated artifacts and all database files are ignored by Git. Test sources and the CI workflow are committed.
