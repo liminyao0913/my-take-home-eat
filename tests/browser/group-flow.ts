@@ -46,6 +46,8 @@ export async function verifyGroupFlow(browser: Browser, origin: string, screensh
       organizer.getByRole("article", { name: "P1 Thai", exact: true }).getByRole("button", { name: /I'd go/ }).click(),
       guest.getByRole("article", { name: "P1 guest noodles", exact: true }).getByRole("button", { name: /I'd go/ }).click(),
     ]);
+    await expect(organizer.getByRole("article", { name: "P1 Thai", exact: true }).getByRole("button", { name: /I'd go/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(guest.getByRole("article", { name: "P1 guest noodles", exact: true }).getByRole("button", { name: /I'd go/ })).toHaveAttribute("aria-pressed", "true");
     expect((await read(organizer)).me?.choices).toEqual({ [winnerId]: "approve" });
     expect((await read(guest)).me?.choices).toEqual({ [alternateId]: "approve" });
     await guest.getByRole("article", { name: "P1 Thai", exact: true }).getByRole("button", { name: /I'd go/ }).click();
@@ -89,6 +91,7 @@ export async function verifyGroupFlow(browser: Browser, origin: string, screensh
       expect((await late.request.put(`${endpoint}/participants/me/ready`, { headers, data: { ready: true } })).status()).toBe(200);
       await organizer.getByRole("button", { name: "Confirm and show result", exact: true }).click();
     }
+    await expect(organizer.getByTestId("result")).toBeVisible();
     const outcomes = await Promise.all(pages.map(read));
     expect(new Set(outcomes.map((value) => value.me?.id)).size).toBe(3);
     const tokens = await Promise.all(contexts.map(async (context) => (await context.cookies()).find((cookie) => cookie.name === "lets_eat_guest")!.value));

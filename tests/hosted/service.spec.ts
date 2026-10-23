@@ -79,7 +79,10 @@ test("hosted smoke: two browsers decide, remember preferences, and reuse the res
     await other.getByRole("button", { name: "Add option", exact: true }).click();
     await expect(page.getByRole("article", { name: "Hosted Pasta", exact: true })).toBeVisible();
     await fillPreferences(page, "Thai"); await fillPreferences(other, "Italian");
-    for (const person of [page, other]) await person.getByRole("article", { name: "Hosted Thai", exact: true }).getByRole("button", { name: /I'd go/ }).click();
+    for (const person of [page, other]) {
+      const vote = person.getByRole("article", { name: "Hosted Thai", exact: true }).getByRole("button", { name: /I'd go/ });
+      await vote.click(); await expect(vote).toHaveAttribute("aria-pressed", "true");
+    }
     const before = await room(owner.request, id); const theirs = await room(guest.request, id);
     expect(before.options[0].approvalCount).toBe(2);
     expect(before.me?.preferences.cuisines).toEqual(["Thai"]); expect(theirs.me?.preferences.cuisines).toEqual(["Italian"]);

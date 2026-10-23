@@ -29,6 +29,7 @@ export async function verifyInvitations(browser: Browser, origin: string, screen
     const unready = await owner.request.post(`${endpoint}/finish`, { headers, data: { overrideMissing: true } });
     expect(unready.status()).toBe(409); expect((await unready.json()).code).toBe("NOT_READY");
     await other.getByRole("button", { name: "I'm done", exact: true }).click();
+    await expect(other.getByRole("button", { name: "Keep deciding", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(other.getByRole("region", { name: "Finish voting" })).toContainText("The organizer must confirm");
     await expect(other.getByRole("button", { name: "Finish voting early", exact: true })).toHaveCount(0);
     const implicit = await owner.request.post(`${endpoint}/finish`, { headers });
@@ -42,6 +43,7 @@ export async function verifyInvitations(browser: Browser, origin: string, screen
     expect((await (await owner.request.get(endpoint)).json()).state).toBe("open");
     await page.getByRole("button", { name: "Finish voting early", exact: true }).click();
     await page.getByRole("button", { name: "Finish without missing people", exact: true }).click();
+    await expect(page.getByTestId("result")).toBeVisible();
     const closed: RoomSnapshot = await (await owner.request.get(endpoint)).json();
     expect(closed.result).toMatchObject({ participantCount: 2, expectedParticipantCount: 4, invitationOverride: true, closedEarly: true });
     expect(closed.me?.isOrganizer).toBe(true);
