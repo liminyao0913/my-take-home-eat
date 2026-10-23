@@ -1,8 +1,10 @@
 # Self-review remediation and Render release
 
-Status: proposed implementation specification, October 23, 2026. Work branch: `fix/self-reflect-render`, starting from `9834f5e`. Implements the findings in [the self-review](feedback/self-reflect/REVIEW.md); it does not implement the broader next-features plan. The user subsequently authorized configuring the existing Render service and adding service version information. Those delivery changes are recorded in verification; the F1–F6/F8 application fixes below remain proposed.
+Status: implementation authorized and in progress, October 23, 2026. Work branch: `fix/self-reflect-render`, starting from `9834f5e`. Implements the findings in [the self-review](feedback/self-reflect/REVIEW.md); it does not implement the broader next-features plan. The user subsequently authorized configuring the existing Render service and adding service version information. Those delivery changes are recorded in verification. The user has now authorized all remediation below, publication of the feature branch, and deployment and verification on Render.
 
-The user has selected Render at **https://lets-eat-ba8e.onrender.com/**. This supersedes the earlier LAN-only delivery decision. Keep local/LAN development, SQLite, automatic browser identity, and the existing voting rules. Do not add accounts, email, Google discovery, notifications, PostgreSQL, Redis, or a separate backend.
+The user has selected Render at **https://lets-eat-ba8e.onrender.com/**. This supersedes the earlier LAN-only delivery decision. Keep localhost development, SQLite, automatic browser identity, and the existing voting rules. Do not add accounts, email, Google discovery, notifications, PostgreSQL, Redis, or a separate backend.
+
+Implementation checkpoint: bounded uploads and admission, transactional room limits, transaction-time credential checks, read-only identity lookup, bounded background expiry cleanup, and a 100 ms HTTP SQLite busy timeout are implemented. All 66 unit/integration tests, TypeScript, and ESLint pass locally. Regressions cover delayed uploads after forgetting, expiry across an external write lock, read availability during contention, participant churn, oversized legacy rounds, and bounded cleanup. Browser/hosted verification, bounded history, startup readiness, headers/logging, dependency review, and capacity measurements remain pending. This is not a release-completion claim.
 
 ## 1. Deployment baseline and immediate recovery
 

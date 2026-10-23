@@ -215,6 +215,7 @@ describe("real SQLite room service", () => {
     } finally { other.sqlite.close(); }
   });
   it("checks the clock after a lock wait that crosses the deadline", async () => {
+    database.sqlite.pragma("busy_timeout = 1000"); // Exercise an actual wait; HTTP connections use 100 ms.
     const { id } = service.create("alex", input);
     const meal = service.get(id, "alex").options[0].id;
     const worker = new Worker(`
@@ -233,5 +234,46 @@ describe("real SQLite room service", () => {
     expect(() => new RoomService(database.db).respond(id, "alex", meal, { choice: "approve" })).toThrowError(expect.objectContaining({ status: 409 }));
     await exited;
     expect(new RoomService(database.db).get(id, "alex")).toMatchObject({ state: "closed", options: [{ approvalCount: 0 }, { approvalCount: 0 }] });
+  });
+
+  it("caps options atomically across connections and preserves existing oversized rounds", () => {
+    expect(() => service.create("alex", { ...input, options: Array(21).fill(option) })).toThrowError(expect.objectContaining({ status: 400 }));
+    const { id } = service.create("alex", { ...input, options: Array(19).fill(option) });
+    const other = openDatabase(filename);
+    try {
+      service.addOption(id, "alex", option);
+      expect(() => new RoomService(other.db, () => now).addOption(id, "alex", option)).toThrowError(expect.objectContaining({ code: "OPTION_LIMIT" }));
+    } finally { other.sqlite.close(); }
+    database.sqlite.prepare("INSERT INTO options (room_id, author_id, place_name, location, start_at, created_at) SELECT room_id, author_id, 'Legacy extra', location, start_at, created_at FROM options LIMIT 1").run();
+    const snapshot = service.get(id, "alex");
+    expect(snapshot.options).toHaveLength(21);
+    service.respond(id, "alex", snapshot.options[20].id, { choice: "approve" });
+    service.setReady(id, "alex", { ready: true }); service.finish(id, "alex");
+    expect(service.get(id, "alex").result?.winner?.placeName).toBe("Legacy extra");
+  });
+
+  it("counts inactive memberships against capacity while allowing the same identity to rejoin", () => {
+    const { id } = service.create("alex", input);
+    for (let i = 0; i < 31; i++) {
+      service.join(id, `person-${i}`, { displayName: "Friend" });
+      service.leave(id, `person-${i}`);
+    }
+    expect(() => service.join(id, "overflow", { displayName: "New friend" })).toThrowError(expect.objectContaining({ code: "PARTICIPANT_LIMIT" }));
+    service.join(id, "person-0", { displayName: "Returning friend" });
+    expect(service.get(id, "person-0").me?.displayName).toBe("Returning friend");
+  });
+
+  it("caps stored rooms, open rounds, and round count without counting expired open flags", () => {
+    const ids = Array.from({ length: 100 }, () => service.create("alex", input).id);
+    expect(() => service.create("alex", input)).toThrowError(expect.objectContaining({ code: "OPEN_ROOM_LIMIT" }));
+    now += ROUND_MS;
+    service.create("alex", input);
+    database.sqlite.prepare("UPDATE rooms SET round = 100 WHERE id = ?").run(ids[0]);
+    expect(() => new RoomService(database.db, () => now, 100).startRound(ids[0], "alex", input)).toThrowError(expect.objectContaining({ code: "ROUND_LIMIT" }));
+    database.sqlite.transaction(() => {
+      const insert = database.sqlite.prepare("INSERT INTO rooms (id, title, meal_date, area, time_zone, created_at, deadline_at) SELECT ?, title, meal_date, area, time_zone, created_at, deadline_at FROM rooms WHERE id = ?");
+      for (let i = 101; i < 10_000; i++) insert.run(`old-${i}`, ids[0]);
+    })();
+    expect(() => service.create("alex", input)).toThrowError(expect.objectContaining({ code: "ROOM_LIMIT" }));
   });
 });

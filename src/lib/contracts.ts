@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIMITS } from "./limits";
 
 export const ROUND_MS = 10 * 60 * 1000;
 export const PROFILE_IDLE_MS = 180 * 24 * 60 * 60 * 1000;
@@ -35,13 +36,13 @@ export const createRoomInput = z.object({
   mealDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date."),
   area: z.string().trim().max(120).default(""),
   timeZone: z.string().min(1).max(100),
-  options: z.array(optionInput).default([]),
+  options: z.array(optionInput).max(LIMITS.options, "Use at most 20 meal ideas.").default([]),
   preferences: savedPreferencesInput.optional(),
 });
 
 export const roundInput = z.object({
   mealDate: createRoomInput.shape.mealDate,
-  options: z.array(optionInput).min(1, "Add a new idea for this round."),
+  options: z.array(optionInput).min(1, "Add a new idea for this round.").max(LIMITS.options, "Use at most 20 meal ideas."),
 });
 export const readyInput = z.object({ ready: z.boolean() });
 

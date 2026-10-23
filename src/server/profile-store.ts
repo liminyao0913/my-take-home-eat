@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { PROFILE_IDLE_MS, type DecisionResult, type MealOption, type PastPlace, type SavedPreferences } from "@/lib/contracts";
 import type { Database } from "./db";
 import { ApiError } from "./errors";
@@ -8,20 +8,49 @@ import { browserCredentials, options, participants, profileRooms, profileRounds,
 
 type Query = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
 
+// Delete children first so an expired, large profile cannot trigger an unbounded cascade.
 export function pruneExpiredProfiles(db: Query, now: number) {
-  db.delete(profiles).where(inArray(profiles.id, db.select({ id: browserCredentials.profileId }).from(browserCredentials).where(lte(browserCredentials.expiresAt, now)))).run();
-  db.update(browserCredentials).set({ legacyAvailable: false }).where(and(lte(browserCredentials.expiresAt, now), eq(browserCredentials.legacyAvailable, true))).run();
+  for (const table of [profileRounds, profileRooms]) {
+    db.run(sql`DELETE FROM ${table} WHERE rowid IN (
+      SELECT child.rowid FROM ${table} AS child JOIN browser_credentials AS credential
+        ON credential.profile_id = child.profile_id WHERE credential.expires_at <= ${now} LIMIT 100
+    )`);
+  }
+  db.run(sql`DELETE FROM profiles WHERE id IN (
+    SELECT p.id FROM profiles AS p JOIN browser_credentials AS c ON c.profile_id = p.id
+    WHERE c.expires_at <= ${now}
+      AND NOT EXISTS (SELECT 1 FROM profile_rooms WHERE profile_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM profile_rounds WHERE profile_id = p.id) LIMIT 100
+  )`);
+  db.run(sql`UPDATE browser_credentials SET legacy_available = 0 WHERE token_hash IN (
+    SELECT token_hash FROM browser_credentials WHERE expires_at <= ${now} AND legacy_available = 1 LIMIT 100
+  )`);
 }
 
-export function credentialFor(db: Query, hash: string | null, now: number, renew = false) {
+export function credentialFor(db: Query, hash: string | null, now: number) {
   if (!hash) return null;
   const credential = db.select().from(browserCredentials).where(and(eq(browserCredentials.tokenHash, hash), gt(browserCredentials.expiresAt, now))).get();
-  if (!credential || (!credential.profileId && !credential.legacyAvailable)) return null;
-  if (renew && credential.profileId && credential.expiresAt < now + PROFILE_IDLE_MS - 86400000) {
-    credential.expiresAt = now + PROFILE_IDLE_MS;
-    db.update(browserCredentials).set({ expiresAt: credential.expiresAt }).where(eq(browserCredentials.tokenHash, hash)).run();
-  }
-  return credential;
+  return credential && (credential.profileId || credential.legacyAvailable) ? credential : null;
+}
+
+export function requireCredential(db: Query, hash: string | null, now: number, allowNew = false) {
+  const credential = credentialFor(db, hash, now);
+  if (credential) return credential;
+  if (allowNew && hash && !db.select({ hash: browserCredentials.tokenHash }).from(browserCredentials).where(eq(browserCredentials.tokenHash, hash)).get()) return null;
+  throw new ApiError(401, "IDENTITY_EXPIRED", "This browser identity has expired. Refresh to start fresh.");
+}
+
+export function renewCredential(db: Database, hash: string, now: () => number = Date.now) {
+  const current = credentialFor(db, hash, now());
+  if (!current?.profileId || current.expiresAt >= now() + PROFILE_IDLE_MS - 86400000) return current;
+  return db.transaction((tx) => {
+    const time = now(); // Revalidate after obtaining the write lock.
+    const credential = credentialFor(tx, hash, time);
+    if (!credential?.profileId || credential.expiresAt >= time + PROFILE_IDLE_MS - 86400000) return credential;
+    const expiresAt = time + PROFILE_IDLE_MS;
+    tx.update(browserCredentials).set({ expiresAt }).where(and(eq(browserCredentials.tokenHash, hash), eq(browserCredentials.expiresAt, credential.expiresAt))).run();
+    return { ...credential, expiresAt };
+  }, { behavior: "immediate" });
 }
 
 export function profileFor(db: Query, hash: string | null, now: number) {

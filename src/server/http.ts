@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { z } from "zod";
 import { getDatabase } from "./db";
-import { ApiError } from "./errors";
+import { ApiError, isSqliteBusy, parseInput } from "./errors";
+import { readJson } from "./request-body";
+import { admission, isCreation } from "./admission";
 import { appOrigin, refreshIdentity } from "./identity";
 import { RoomService } from "./rooms";
 import { ProfileService } from "./profiles";
@@ -15,20 +18,29 @@ export const profileService = () => new ProfileService(getDatabase().db);
 
 export async function handle(request: NextRequest, action: () => Promise<NextResponse> | NextResponse) {
   try {
+    admission().global(request.method, isCreation(request));
     if (request.method !== "GET" && request.headers.get("origin") !== appOrigin()) throw new ApiError(403, "WRONG_ORIGIN", "Open this room on its original site before making changes.");
     const response = await action();
     refreshIdentity(request, response);
     return response;
   } catch (error) {
-    if (error instanceof ApiError) return json({ code: error.code, message: error.message, fieldErrors: error.fieldErrors }, error.status);
+    if (isSqliteBusy(error)) {
+      const response = json({ code: "DATABASE_BUSY", message: "The service is busy. Try again shortly." }, 503);
+      response.headers.set("Retry-After", "1");
+      return response;
+    }
+    if (error instanceof ApiError) {
+      const response = json({ code: error.code, message: error.message, fieldErrors: error.fieldErrors }, error.status);
+      if (error.retryAfter) response.headers.set("Retry-After", String(error.retryAfter));
+      return response;
+    }
     console.error("Room request failed", error);
     return json({ code: "SERVER_ERROR", message: "Something went wrong. Please try again." }, 500);
   }
 }
 
-export async function body(request: NextRequest) {
-  try { return await request.json(); }
-  catch { throw new ApiError(400, "INVALID_JSON", "Send a valid JSON request."); }
+export async function body<T>(request: NextRequest, schema: z.ZodType<T>): Promise<T> {
+  return parseInput(schema, await readJson(request));
 }
 
 export function optionId(value: string) {

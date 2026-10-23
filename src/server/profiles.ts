@@ -4,7 +4,7 @@ import { profileInput, recommendationInput, type HistoryPage, type HistoryRoom, 
 import { recommend } from "@/lib/recommendations";
 import type { Database } from "./db";
 import { ApiError, parseInput } from "./errors";
-import { capturePersonalRound, credentialFor, ensureProfile, pastPlace, profileFor, pruneExpiredProfiles } from "./profile-store";
+import { capturePersonalRound, credentialFor, ensureProfile, pastPlace, profileFor } from "./profile-store";
 import { RoomService } from "./rooms";
 import { browserCredentials, participants, profileRooms, profileRounds, profiles, rooms } from "./schema";
 
@@ -12,7 +12,6 @@ export class ProfileService {
   constructor(private db: Database, private now: () => number = Date.now) {}
 
   get(hash: string | null): ProfileSnapshot {
-    this.db.transaction((tx) => pruneExpiredProfiles(tx, this.now()), { behavior: "immediate" });
     const credential = credentialFor(this.db, hash, this.now());
     const profile = profileFor(this.db, hash, this.now());
     return {
@@ -21,16 +20,18 @@ export class ProfileService {
     };
   }
 
-  private requireProfile(hash: string | null) {
-    const profile = this.get(hash).profile;
+  private requireProfile(hash: string | null, db: Parameters<Parameters<Database["transaction"]>[0]>[0] | Database = this.db) {
+    const profile = profileFor(db, hash, this.now());
     if (!profile) throw new ApiError(401, "PROFILE_REQUIRED", "Create or join a meal to remember meals in this browser.");
     return profile;
   }
 
   update(hash: string | null, value: unknown) {
     const input = parseInput(profileInput, value);
-    const profile = this.requireProfile(hash);
-    this.db.update(profiles).set(input).where(eq(profiles.id, profile.id)).run();
+    this.db.transaction((tx) => {
+      const profile = this.requireProfile(hash, tx);
+      tx.update(profiles).set(input).where(eq(profiles.id, profile.id)).run();
+    }, { behavior: "immediate" });
     return this.get(hash);
   }
 
@@ -94,8 +95,8 @@ export class ProfileService {
   }
 
   removeRoom(hash: string | null, roomId: string) {
-    const profile = this.requireProfile(hash);
     this.db.transaction((tx) => {
+      const profile = this.requireProfile(hash, tx);
       const changed = tx.update(profileRooms).set({ hidden: true }).where(and(eq(profileRooms.profileId, profile.id), eq(profileRooms.roomId, roomId))).run();
       if (!changed.changes) throw new ApiError(404, "NOT_FOUND", "This meal is not in your history.");
       tx.delete(profileRounds).where(and(eq(profileRounds.profileId, profile.id), eq(profileRounds.roomId, roomId))).run();

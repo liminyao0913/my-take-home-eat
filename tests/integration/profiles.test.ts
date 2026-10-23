@@ -6,7 +6,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { openDatabase } from "@/server/db";
 import { ProfileService } from "@/server/profiles";
 import { RoomService } from "@/server/rooms";
-import { credentialFor } from "@/server/profile-store";
+import { credentialFor, renewCredential, pruneExpiredProfiles } from "@/server/profile-store";
 import { PROFILE_IDLE_MS, ROUND_MS } from "@/lib/contracts";
 
 const start = Date.parse("2027-06-01T10:00:00Z");
@@ -146,9 +146,11 @@ describe("browser profiles in SQLite", () => {
   it("renews active identities, expires idle profiles, and never adopts expired legacy credentials", () => {
     rooms.create("alex", input);
     now += 2 * 86400000;
-    expect(credentialFor(database.db, "alex", now, true)?.expiresAt).toBe(now + PROFILE_IDLE_MS);
+    expect(renewCredential(database.db, "alex", () => now)?.expiresAt).toBe(now + PROFILE_IDLE_MS);
     now += PROFILE_IDLE_MS;
     expect(people.get("alex").profile).toBeNull();
+    expect(count("profiles")).toBe(1); // Expiry is enforced before background deletion.
+    database.db.transaction((tx) => pruneExpiredProfiles(tx, now), { behavior: "immediate" });
     expect(count("profiles")).toBe(0); expect(count("profile_rooms")).toBe(0);
     expect(count("participants")).toBe(1);
     expect(() => people.importLegacy("alex")).toThrow();

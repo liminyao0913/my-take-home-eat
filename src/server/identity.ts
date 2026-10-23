@@ -2,21 +2,19 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { getDatabase } from "./db";
-import { credentialFor, pruneExpiredProfiles } from "./profile-store";
+import { isSqliteBusy } from "./errors";
+import { admitCredential } from "./admission";
+import { credentialFor, renewCredential } from "./profile-store";
 
 const COOKIE = "lets_eat_guest";
-const resolved = new WeakMap<NextRequest, { token: string | null; hash: string | null }>();
 export function identity(request: NextRequest, issue = false) {
-  const cached = resolved.get(request);
-  if (cached && (cached.token || !issue)) return cached;
   const { db } = getDatabase();
   const now = Date.now();
-  db.transaction((tx) => pruneExpiredProfiles(tx, now), { behavior: "immediate" });
   const value = request.cookies.get(COOKIE)?.value;
-  const known = value && /^[a-f0-9]{64}$/.test(value) && credentialFor(db, createHash("sha256").update(value).digest("hex"), now, true);
+  const known = value && /^[a-f0-9]{64}$/.test(value) && credentialFor(db, createHash("sha256").update(value).digest("hex"), now);
   const token = known ? value! : issue ? randomBytes(32).toString("hex") : null;
   const result = { token, hash: token ? createHash("sha256").update(token).digest("hex") : null };
-  resolved.set(request, result);
+  if (known) admitCredential(request, result.hash!);
   return result;
 }
 
@@ -31,7 +29,11 @@ export function clearIdentity(response: NextResponse) { response.cookies.set(COO
 export function refreshIdentity(request: NextRequest, response: NextResponse) {
   if (response.headers.has("set-cookie") || !request.cookies.has(COOKIE)) return;
   const guest = identity(request);
-  if (guest.token) setIdentity(response, guest.token);
+  if (guest.token) {
+    try { renewCredential(getDatabase().db, guest.hash!); }
+    catch (error) { if (!isSqliteBusy(error)) throw error; } // Renewal can wait until the next visit.
+    setIdentity(response, guest.token);
+  }
   else clearIdentity(response);
 }
 

@@ -1,7 +1,8 @@
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNull } from "drizzle-orm";
+import { LIMITS } from "@/lib/limits";
 import {
   BLOCK_REASONS, createRoomInput, joinInput, optionInput, roomPreferencesInput, readyInput, responseInput, roundInput, ROUND_MS,
   type MealOption, type OptionInput, type Preferences, type RoomSnapshot,
@@ -11,12 +12,17 @@ import { minuteOfDay, minuteToTime, toInstant } from "@/lib/time";
 import type { Database } from "./db";
 import { ApiError, parseInput } from "./errors";
 import { options, participants, profileRooms, responses, roomRounds, rooms } from "./schema";
-import { capturePersonalRound, ensureProfile, linkProfileRoom, saveDefaults } from "./profile-store";
+import { capturePersonalRound, credentialFor, requireCredential, ensureProfile, linkProfileRoom, saveDefaults } from "./profile-store";
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Query = Database | Transaction;
 type Room = typeof rooms.$inferSelect;
 type Participant = typeof participants.$inferSelect;
+
+function requireOpenCapacity(db: Query, now: number) {
+  const open = db.select({ count: count() }).from(rooms).where(and(isNull(rooms.result), gt(rooms.deadlineAt, now))).get()!.count;
+  if (open >= LIMITS.openRounds) throw new ApiError(409, "OPEN_ROOM_LIMIT", "The service has 100 open rounds. Try again after a round ends.");
+}
 
 function preferencesOf(person: Participant): Preferences {
   return {
@@ -93,7 +99,7 @@ function finalize(db: Query, room: Room, now: number, early = false): Room {
 
 function snapshot(db: Query, room: Room, tokenHash: string | null, now: number): RoomSnapshot {
   const { people, votes, meals } = loadInputs(db, room);
-  const me = people.find((p) => p.tokenHash === tokenHash);
+  const me = credentialFor(db, tokenHash, now) ? people.find((p) => p.tokenHash === tokenHash) : undefined;
   return {
     room: { id: room.id, title: room.title, mealDate: room.mealDate, area: room.area, timeZone: room.timeZone, createdAt: room.createdAt, deadlineAt: room.deadlineAt, round: room.round },
     state: room.result ? "closed" : "open", serverNow: now,
@@ -118,6 +124,9 @@ export class RoomService {
     } catch { throw new ApiError(400, "INVALID_INPUT", "Choose a valid time zone.", { timeZone: ["Use a time zone such as America/Los_Angeles."] }); }
     return this.db.transaction((tx) => {
       const now = this.now();
+      requireCredential(tx, tokenHash, now, true);
+      if (tx.select({ count: count() }).from(rooms).get()!.count >= LIMITS.rooms) throw new ApiError(409, "ROOM_LIMIT", "The service has reached its room capacity. Contact the organizer.");
+      requireOpenCapacity(tx, now);
       validateDate(input.mealDate, input.timeZone, now);
       const id = randomBytes(18).toString("base64url");
       const personId = randomUUID();
@@ -148,11 +157,12 @@ export class RoomService {
     }, { behavior: "immediate" });
   }
 
-  private mutate(roomId: string, action: (tx: Transaction, room: Room, now: number) => void) {
+  private mutate(roomId: string, tokenHash: string | null, action: (tx: Transaction, room: Room, now: number) => void, allowNew = false) {
     const accepted = this.db.transaction((tx) => {
       const room = getRoom(tx, roomId);
       this.checkRound(room);
       const now = this.now(); // Read after acquiring the write lock, including any lock wait.
+      requireCredential(tx, tokenHash, now, allowNew);
       if (room.result || now >= room.deadlineAt) {
         finalize(tx, room, now);
         return false;
@@ -166,8 +176,9 @@ export class RoomService {
 
   join(roomId: string, tokenHash: string, value: unknown) {
     const input = parseInput(joinInput, value);
-    this.mutate(roomId, (tx, room, now) => {
+    this.mutate(roomId, tokenHash, (tx, room, now) => {
       const existing = tx.select().from(participants).where(and(eq(participants.roomId, room.id), eq(participants.tokenHash, tokenHash))).get();
+      if (!existing && tx.select({ count: count() }).from(participants).where(eq(participants.roomId, roomId)).get()!.count >= LIMITS.participants) throw new ApiError(409, "PARTICIPANT_LIMIT", "This room already has 32 participants. Use another room for a larger group.");
       const personId = existing?.id ?? randomUUID();
       if (!existing?.active) {
         if (existing) tx.update(participants).set({ active: true, ready: false, displayName: input.displayName, ...input.preferences }).where(eq(participants.id, existing.id)).run();
@@ -175,12 +186,12 @@ export class RoomService {
       }
       const profile = ensureProfile(tx, tokenHash, input.displayName, now);
       linkProfileRoom(tx, profile.id, roomId, personId, "joined");
-    });
+    }, true);
   }
 
   savePreferences(roomId: string, tokenHash: string | null, value: unknown) {
     const input = parseInput(roomPreferencesInput, value);
-    this.mutate(roomId, (tx, room, now) => {
+    this.mutate(roomId, tokenHash, (tx, room, now) => {
       const person = getParticipant(tx, roomId, tokenHash);
       tx.update(participants).set({ ready: false, cuisines: input.cuisines, maxPriceLevel: input.maxPriceLevel,
         preferredStartMinute: input.startTime === null ? null : minuteOfDay(input.startTime), preferredEndMinute: input.endTime === null ? null : minuteOfDay(input.endTime),
@@ -196,15 +207,16 @@ export class RoomService {
 
   addOption(roomId: string, tokenHash: string | null, value: unknown) {
     const input = parseInput(optionInput, value);
-    this.mutate(roomId, (tx, room, now) => {
+    this.mutate(roomId, tokenHash, (tx, room, now) => {
       const person = getParticipant(tx, roomId, tokenHash);
+      if (tx.select({ count: count() }).from(options).where(eq(options.roomId, roomId)).get()!.count >= LIMITS.options) throw new ApiError(409, "OPTION_LIMIT", "This round already has 20 ideas. Remove one before adding another.");
       tx.insert(options).values({ ...optionValues(input, room), roomId, authorId: person.id, createdAt: now }).run();
       resetReadiness(tx, roomId);
     });
   }
 
   removeOption(roomId: string, tokenHash: string | null, optionId: number) {
-    this.mutate(roomId, (tx) => {
+    this.mutate(roomId, tokenHash, (tx) => {
       const person = getParticipant(tx, roomId, tokenHash);
       const option = getOption(tx, roomId, optionId);
       if (option.authorId !== person.id) throw new ApiError(403, "NOT_YOUR_OPTION", "Only the person who proposed this option can remove it.");
@@ -215,7 +227,7 @@ export class RoomService {
 
   respond(roomId: string, tokenHash: string | null, optionId: number, value: unknown) {
     const input = parseInput(responseInput, value);
-    this.mutate(roomId, (tx) => {
+    this.mutate(roomId, tokenHash, (tx) => {
       const person = getParticipant(tx, roomId, tokenHash);
       getOption(tx, roomId, optionId);
       if (input.choice === null) tx.delete(responses).where(and(eq(responses.participantId, person.id), eq(responses.optionId, optionId))).run();
@@ -225,7 +237,7 @@ export class RoomService {
   }
 
   leave(roomId: string, tokenHash: string | null) {
-    this.mutate(roomId, (tx) => {
+    this.mutate(roomId, tokenHash, (tx) => {
       const person = getParticipant(tx, roomId, tokenHash);
       tx.delete(responses).where(eq(responses.participantId, person.id)).run();
       tx.update(participants).set({ active: false, ready: false, cuisines: [], maxPriceLevel: null, preferredStartMinute: null, preferredEndMinute: null }).where(eq(participants.id, person.id)).run();
@@ -235,14 +247,14 @@ export class RoomService {
 
   setReady(roomId: string, tokenHash: string | null, value: unknown) {
     const input = parseInput(readyInput, value);
-    this.mutate(roomId, (tx) => {
+    this.mutate(roomId, tokenHash, (tx) => {
       const person = getParticipant(tx, roomId, tokenHash);
       tx.update(participants).set({ ready: input.ready }).where(eq(participants.id, person.id)).run();
     });
   }
 
   finish(roomId: string, tokenHash: string | null) {
-    this.mutate(roomId, (tx, room, now) => {
+    this.mutate(roomId, tokenHash, (tx, room, now) => {
       getParticipant(tx, roomId, tokenHash);
       const { people, meals } = loadInputs(tx, room);
       if (!people.length || people.some((p) => !p.ready)) throw new ApiError(409, "NOT_READY", "Everyone who joined must mark ‘I'm done’ before finishing early.");
@@ -256,9 +268,12 @@ export class RoomService {
     this.db.transaction((tx) => {
       let room = getRoom(tx, roomId);
       this.checkRound(room);
-      const person = getParticipant(tx, roomId, tokenHash);
       const now = this.now();
+      requireCredential(tx, tokenHash, now);
+      const person = getParticipant(tx, roomId, tokenHash);
       if (!room.result && now < room.deadlineAt) throw new ApiError(409, "ROUND_OPEN", "Finish the current round before starting another.");
+      if (room.round >= LIMITS.rounds) throw new ApiError(409, "ROUND_LIMIT", "This room has reached 100 rounds. Create a new meal room.");
+      requireOpenCapacity(tx, now);
       validateDate(input.mealDate, room.timeZone, now);
       const next = { ...room, round: room.round + 1, mealDate: input.mealDate, deadlineAt: now + ROUND_MS, result: null, resolvedAt: null };
       const meals = input.options.map((o, i) => ({ ...optionValues(o, next, `options.${i}.startTime`), roomId, authorId: person.id, createdAt: now }));
