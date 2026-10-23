@@ -10,6 +10,8 @@ The existing guest cookie remains the credential. New profiles are created only 
 
 Migration registers existing participant token hashes as legacy credentials, with a 30-day adoption window. It does not infer creator roles or import preferences/history automatically. New profile credentials expire after 180 idle days. Recognized profile activity renews expiry at most once per day; the response cookie uses the same absolute expiry. Requests prune expired profiles and their personal records. Credential hashes remain as minimal revocation records, so replaying a forgotten/expired credential cannot restore old room ownership or trigger legacy import. Deletion does not change shared participants, votes, or frozen results.
 
+Creating a profile with a valid legacy credential adopts that credential into the normal 180-day lifecycle. Its one-time import remains available until used, but creating the profile does not import older memberships automatically.
+
 ## Personal history and closure
 
 Successful creation/joining links the room, reactivating an explicitly hidden history entry only on an explicit join. Removing history hides that membership and deletes its personal recommendation snapshots. Merely viewing a room, polling, or starting another round must not restore hidden history.

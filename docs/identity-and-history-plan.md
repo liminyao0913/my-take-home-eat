@@ -1,6 +1,6 @@
 # Remembered users, preferences, and meal history
 
-Status: product plan for discussion; not implemented. Written October 23, 2026.
+Status: implemented and running at the configured LAN origin. Written and implemented October 23, 2026. See the [implementation spec](identity-and-history-tech-spec.md) and [verification record](verification.md#browser-identity-and-personal-history) for delivery details.
 
 This is a separate feature plan. It covers recognizing returning users, reusable preferences, a personal room history, and suggestions when creating a meal. The broader `next-features-plan.md` is outside this work.
 
@@ -14,9 +14,9 @@ Help a returning person start the next meal with less typing: remember what they
 - No sign-up or login screen. A different browser or computer starts a separate identity.
 - If email is reconsidered, the user wants an unverified identifier with no verification messages. Email verification is not part of this plan.
 - Continue using SQLite and the existing shared-room flow.
-- Write the plan first; application changes come later.
+- Plan first; the user subsequently authorized implementing this separate plan.
 
-**Recommended first release:** a remembered browser profile, reusable cuisine/budget defaults, **My meals**, and up to three history-based suggestions in the create-room form. Device transfer and account recovery are deferred.
+**First release:** a remembered browser profile, reusable cuisine/budget defaults, **My meals**, and up to three history-based suggestions in the create-room form. Device transfer and account recovery are deferred.
 
 ## 2. Identity options
 
@@ -31,7 +31,7 @@ A display name or email tells us what someone calls themselves. A browser-held s
 | **Passkey** | Device confirmation when registering or restoring access; no typed password. | Depends on available passkey/device support. | An optional future authentication method. WebAuthn requires a secure context and is unavailable on the current public HTTP origin. [MDN WebAuthn](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API) |
 | **Name, IP address, or browser fingerprint** | Attempts to guess who is returning. | Unreliable. | Names collide, people share networks, and device characteristics change. Do not use these as the access credential. [OWASP authentication guidance](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#adaptive-or-risk-based-authentication) |
 
-The selected option recognizes a browser, not a verified real-world person. Sharing a browser profile also shares access to its saved meals. Clearing cookies, using a private window, or changing browsers can lose continuity. Browser cookie lifetime and removal are controlled partly by the browser. [MDN cookie guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies)
+The selected option recognizes a browser, not a verified real-world person. Sharing a browser profile also shares access to its saved meals. Clearing cookies, using a private window, changing browsers, or switching the site's hostname can lose continuity. Browser cookie lifetime and removal are controlled partly by the browser. [MDN cookie guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies)
 
 ## 3. What the user sees
 
@@ -140,9 +140,9 @@ Use the latest available manually entered details and label them as previous est
 
 ## 7. Existing data and implementation boundaries
 
-The current service already issues a random HttpOnly guest cookie on create/join and stores its hash on room participant records. Its cookie lasts 30 days. Preferences are currently room-specific. Closed round results are archived, but starting another round deletes its old options/responses; a result snapshot contains aggregate counts, not a complete per-person voting history. See [identity.ts](../src/server/identity.ts), [schema.ts](../src/server/schema.ts), and [rooms.ts](../src/server/rooms.ts).
+Before this feature, the service issued a random HttpOnly guest cookie lasting 30 days on create/join and stored its hash on room participant records. Preferences were room-specific. Closed round results were archived, but starting another round deleted its old options/responses; a result snapshot contains aggregate counts, not a complete per-person voting history. This is the legacy migration boundary. See [identity.ts](../src/server/identity.ts), [schema.ts](../src/server/schema.ts), and [rooms.ts](../src/server/rooms.ts).
 
-The later technical spec should cover these changes in SQLite:
+The [implementation spec](identity-and-history-tech-spec.md) covers these changes in SQLite:
 
 - A stable internal browser-profile ID, saved defaults, and the credential association. The profile ID itself must not grant access; possession of the browser credential is required.
 - A per-profile room index with origin/participation status, personal removal state, and round references.
@@ -155,11 +155,11 @@ Legacy adoption is a one-time path. It must not revive forgotten/expired profile
 
 Older archived results may be displayed as room context, but they do not establish the user’s participation or personal approval in each past round. Do not reconstruct missing individual votes from aggregate counts or current membership. Only use legacy recommendation signals when the surviving records establish the relevant participation and response; otherwise begin collecting those signals from this release onward. Unknown creator roles should be displayed as **Joined**, without inventing authorship.
 
-Proposed lifecycle: extend remembered browser access to 180 days of inactivity, with matching server-side expiry. Expired personal profiles/defaults/recommendation records should be removed rather than accumulating unreachable histories; shared-room data follows the room’s own retention policy. Cookie removal can end access sooner. Confirm the exact expiry and cleanup mechanism in the technical spec.
+Implemented lifecycle: remembered browser access lasts 180 days of inactivity, with matching server-side expiry. Recognized activity renews access at most once a day. Requests remove expired personal profiles/defaults/recommendation records; shared-room data remains. Cookie removal can end access sooner. Minimal revoked credential hashes prevent old participant records from reviving expired or forgotten identities. Existing credentials have a 30-day adoption window after migration; no history is imported automatically.
 
 Personal profile/history endpoints must not expose one person’s collection through a room snapshot, a guessed profile ID, or a display-name query. A room invite still grants the existing room access only.
 
-The current public address uses HTTP. Browser-held secrets on that connection are not protected against network interception; HttpOnly is not transport encryption. The plan makes no DNS or deployment change, and the existing host can support a trusted prototype, but broad use of durable personal history should include HTTPS as a separate deployment decision. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+The configured LAN address uses HTTP. Browser-held secrets on that connection are not protected against network interception; HttpOnly is not transport encryption. The plan makes no DNS or deployment change, and the existing host can support a trusted prototype, but broad use of durable personal history should include HTTPS as a separate deployment decision. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 
 ## 8. Delivery order and acceptance
 
@@ -173,8 +173,8 @@ The current public address uses HTTP. Browser-held secrets on that connection ar
 
 Product targets: a returning person can draft a meal from a past idea in under 30 seconds, explain why it was suggested, and create/join without an email or login step. These are targets to verify, not measured claims.
 
-## 9. Decisions for the next technical discussion
+## 9. Settled implementation decisions
 
-The identity direction is settled for this plan: automatic browser identity and no email lookup. The recommended feature rules above provide a concrete starting point. The remaining technical work is to specify the profile/room relationships, credential lifetime, minimal per-round snapshots, history cleanup, migration, API, and end-to-end tests.
+The identity direction is automatic browser identity and no email lookup. Four additional SQLite tables hold profiles, hashed browser credentials, personal memberships, and per-round signals. Finalization and personal signal capture are atomic. Private APIs support defaults, paginated history, one-time adoption, removal, forgetting, and recommendations. Automated SQLite and browser tests cover these boundaries; release evidence is recorded separately.
 
 Keep the first release focused on browser continuity, saved cuisine/budget, room history, and creator suggestions. Revisit device transfer only if users need it; it should require proof from an existing browser or a saved private credential, not merely a matching email or name.

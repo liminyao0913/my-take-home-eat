@@ -2,6 +2,8 @@
 
 Status: implementation specification. Current progress and verification results are recorded in [APPROACH.md](../APPROACH.md). This spec implements [the product plan](plan.md).
 
+Identity/history extension: [the separate implementation spec](identity-and-history-tech-spec.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and creator suggestions. Its credential lifecycle and private APIs supersede the original guest-only behavior below; group voting rules remain the same.
+
 Delivery update: the user selected **local delivery** during implementation. Complete the app, local release tests, ten-minute deadline check, and restart/restore verification. The Render setup below is retained for a future deployment; hosted checks are deferred.
 
 ## 1. What we need and what we choose
@@ -97,13 +99,13 @@ The result includes the selected meal or no-winner reason, the decision basis, p
 
 The shared URL identifies the room, not an individual participant.
 
-1. On create or join, reuse the existing guest cookie. If absent or malformed, issue a cryptographically random 256-bit guest token in an HttpOnly, SameSite=Lax cookie with Path=/ and a thirty-day lifetime. Use Secure when the configured app origin is HTTPS.
+1. On create or join, reuse an active registered guest cookie. If absent, malformed, expired, or revoked, issue a cryptographically random 256-bit guest token in an HttpOnly, SameSite=Lax cookie with Path=/. Browser profiles have a 180-day idle lifetime enforced both in the cookie and on the server; see the identity/history extension for renewal and legacy adoption. Use Secure when the configured app origin is HTTPS.
 2. Store only a SHA-256 hash of that token on the room's participant record.
 3. Resolve the caller from the cookie and room ID on each request. Never accept a participant ID from the request body as proof of ownership.
 4. Enforce one participant per room and token hash. Repeated join requests restore the same active participant.
 5. Leaving marks the participant inactive, clears their preferences, and deletes their responses in one transaction. Their proposals remain. Rejoining before closure reactivates that same record with cleared inputs.
 
-The cookie can support participation in several rooms without a global account table. Duplicate display names are allowed. Clearing the cookie or using another browser creates another identity.
+The cookie supports participation in several rooms and now links to a browser profile, without a login or email account. Duplicate display names are allowed. Clearing the cookie or using another browser creates another identity.
 
 Generate room IDs from at least 128 random bits and use them directly in /r/[roomId]. Anyone holding that link can view and join, as specified in the product plan.
 
@@ -111,7 +113,7 @@ All writes check the request Origin against APP_ORIGIN and require an active par
 
 ## 5. Database model and storage
 
-Use five application tables. Store timestamps as integer UTC epoch milliseconds, the meal date as YYYY-MM-DD, and the room time zone as an IANA identifier.
+The shared-room model uses five application tables, with four additional personal-data tables described in the identity/history extension. Store timestamps as integer UTC epoch milliseconds, the meal date as YYYY-MM-DD, and the room time zone as an IANA identifier.
 
 | Table | Main columns | Constraints |
 | --- | --- | --- |
