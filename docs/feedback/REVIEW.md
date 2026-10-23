@@ -2,13 +2,13 @@
 
 Reviewed on October 22, 2026 (America/Los_Angeles).
 
-App: [Let's Eat](http://24.130.34.221:3000/)
+Current app: [Let's Eat on Render](https://lets-eat-ba8e.onrender.com/)
 
 The visual design and basic flows are cohesive. The biggest opportunities are to help groups recover from disagreement, reach a decision sooner, and reduce the organizer's setup effort.
 
 ## Implementation follow-up
 
-The observations below describe the original review. All six requested improvements were implemented and verified on October 22 at the public HTTP address above. That address is historical; see the [current deployment guide](../deployment.md) and [verification record](../verification.md) for the subsequent LAN release and selected Render host. The dated evidence below remains unchanged.
+The observations below describe the original review. All six requested improvements were implemented and verified on October 22 on an earlier HTTP prototype. Its retired address is omitted. See the [current deployment guide](../deployment.md) for localhost and Render setup and the [verification record](../verification.md) for later release results.
 
 | Item | Delivered behavior | Verification |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ The observations below describe the original review. All six requested improveme
 | 5. Mobile voting | Guests join above the cards; participants get voting before collapsed people/preferences panels, with a small preferences shortcut and response statuses. | 375-pixel browser layout/keyboard checks and screenshot; no horizontal overflow. |
 | 6. Quick results | **Try a demo** opens prefilled fictional options and inputs, voting, immediate **Show result**, preference-only recommendations, and an all-excluded example. | Home-to-result browser journey under one minute; no room API requests; shared production decision function. |
 
-The rationale is recorded in [APPROACH.md](../../APPROACH.md#ux-review-implementation), and the current behavior is reflected in the [product plan](../plan.md) and [technical spec](../tech-spec.md). All 17 regular production-build browser scenarios passed, as did the separate unaccelerated ten-minute test. The public URL also passed a two-session smoke test after a verified, data-preserving SQLite migration. Release evidence is tracked in [verification.md](../verification.md).
+The rationale is recorded in [detail_decisions.md](../../detail_decisions.md#ux-review-implementation), and the current behavior is reflected in the [product plan](../plan.md) and [technical spec](../tech-spec.md). All 17 regular production-build browser scenarios passed, as did the separate unaccelerated ten-minute test. The public URL also passed a two-session smoke test after a verified, data-preserving SQLite migration. Release evidence is tracked in [verification.md](../verification.md).
 
 ## Review scope
 

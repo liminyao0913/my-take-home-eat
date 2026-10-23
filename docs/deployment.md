@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-On an existing checkout, preserve `.env.local` and set `APP_ORIGIN=http://localhost:3000` and `DATABASE_PATH=.data/lets-eat.sqlite`. Development and production startup bind to localhost, apply committed migrations, and validate configuration/schema/writability before listening. No LAN address, router change, or public IP is needed.
+On an existing checkout, preserve `.env.local` and set `APP_ORIGIN=http://localhost:3000` and `DATABASE_PATH=.data/lets-eat.sqlite`. Development and production startup bind to localhost, apply committed migrations, and validate configuration/schema/writability before listening.
 
 For production mode, stop the running local process before replacing its build:
 

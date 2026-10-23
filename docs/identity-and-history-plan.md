@@ -1,6 +1,6 @@
 # Remembered users, preferences, and meal history
 
-Status: implemented and verified on the LAN host, October 23, 2026. Render is now the selected public host; the hosted core flow, real deadline, and redeploy persistence also passed. See the [implementation spec](identity-and-history-tech-spec.md) and [verification record](verification.md) for delivery details and remaining hardening work.
+Status: implemented and verified locally, October 23, 2026. Render is now the selected public host; the hosted core flow, real deadline, and redeploy persistence also passed. See the [implementation spec](identity-and-history-tech-spec.md) and [verification record](verification.md) for delivery details and remaining hardening work.
 
 This is a separate feature plan. It covers recognizing returning users, reusable preferences, a personal room history, and suggestions when creating a meal. The broader `next-features-plan.md` is outside this work.
 
@@ -159,7 +159,7 @@ Implemented lifecycle: remembered browser access lasts 180 days of inactivity, w
 
 Personal profile/history endpoints must not expose one person’s collection through a room snapshot, a guessed profile ID, or a display-name query. A room invite still grants the existing room access only.
 
-The original LAN address uses HTTP, which does not protect browser-held secrets against network interception; HttpOnly is not transport encryption. The user subsequently selected Render HTTPS hosting. Verify its Secure cookie and exact origin behavior through the [hosted release checks](deployment.md#local-and-hosted-release-checks); the original HTTP prototype is not the public release target. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+Public access uses Render HTTPS hosting. HTTP does not protect browser-held secrets against network interception; HttpOnly is not transport encryption. Verify its Secure cookie and exact origin behavior through the [hosted release checks](deployment.md#local-and-hosted-release-checks); the original HTTP prototype is not the public release target. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 
 ## 8. Delivery order and acceptance
 

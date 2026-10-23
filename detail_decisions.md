@@ -1,8 +1,8 @@
-# Approach and decisions
+# Detailed decisions
 
-This is the running decision record for Let's Eat. Keep it updated as product and technical choices are made. Detailed product behavior lives in [docs/plan.md](docs/plan.md).
+This is the chronological decision record for Let's Eat, renamed from the original APPROACH.md. Keep detailed decisions here; the current overview is [APPROACH.md](APPROACH.md). Earlier milestones describe the product at that time. Current setup is documented for localhost and Render in [docs/deployment.md](docs/deployment.md); superseded network setup instructions and addresses have been removed. Detailed product behavior lives in [docs/plan.md](docs/plan.md).
 
-The current work is [self-review remediation and Render hosting](#self-review-remediation-and-render-hosting). Earlier sections retain the original decisions and verification history.
+The latest delivered work is recorded under [self-review remediation and Render hosting](#self-review-remediation-and-render-hosting) and its subsequent implementation entries. Earlier sections retain the original decisions and verification history.
 
 The broader brainstorming in [docs/next-features-plan.md](docs/next-features-plan.md) remains deferred. It is not the current release checklist; separately implemented features are documented in the identity/history plan.
 
@@ -18,7 +18,7 @@ The separate [identity and history plan](docs/identity-and-history-plan.md) reco
 - Favor a small first version and move to a technical spec once the product rules are clear.
 - Use SQLite, as explicitly requested.
 - Deliver a working product and verify it with end-to-end tests.
-- Host publicly on Render at `https://lets-eat-ba8e.onrender.com`, using SQLite on one persistent disk. Local/LAN development remains supported; this supersedes the earlier local-only/public-IP hosting decisions.
+- Host publicly on Render at `https://lets-eat-ba8e.onrender.com`, using SQLite on one persistent disk. Local development uses localhost only.
 
 ## Original product baseline after the simplicity pass
 
@@ -59,7 +59,7 @@ The implementation details and verification gates are in [docs/tech-spec.md](doc
 | Tailwind CSS with semantic HTML and ordinary React state. | Keeps the small interface accessible without adding a component or global state framework. |
 | SQLite through Drizzle and better-sqlite3. | Honors the database choice, provides migrations and typed queries, and needs no database server. |
 | One Node.js 24 app with a local persistent database file. | Fits SQLite's storage model; run one service instance and keep transactions short. |
-| Use the existing computer with public access on port 3000; retain Render with a persistent disk as a future deployment option. | The user initially chose local delivery, then supplied the public address for that computer. The prepared Render configuration remains available for future managed hosting. |
+| Validate the original prototype locally before managed hosting. | Render with a persistent disk was initially deferred and later selected for public delivery. See the current deployment guide for setup. |
 | A random HttpOnly guest cookie, with only its hash stored per room participant. | Supports identity and ownership without accounts; the shared link is distinct from the participant credential. |
 | Poll the room every three seconds while visible, including after closure. | Sufficient for small groups; closed-room polling lets people see a new round start on the same link. |
 | Enforce the persisted deadline on the server; save the result on the first request after expiry. | No worker or browser timer is required. Closure is effective at the deadline even when snapshot materialization happens later. |
@@ -88,29 +88,17 @@ The final production build passed, then the expanded regular browser suite passe
 
 The Render Blueprint validates against its official schema. Its startup command was exercised locally against a fresh database: migrations, readiness, origin handling, and room creation passed. CI configuration is provided; no remote CI run is claimed.
 
-The user initially chose local delivery when asked about the deployment repository. Managed hosting is deferred and is no longer a completion requirement for this implementation. Future deployment configuration and recovery instructions remain in `render.yaml` and `docs/deployment.md`. No remote or paid resources have been created; subsequent public access uses the existing computer, as recorded below.
+The initial delivery was a local prototype with SQLite at `.data/lets-eat.sqlite`, before public Render hosting was selected. Every repository commit uses the user's configured author and committer identity, Limin Yao <isabel0913@gmail.com>.
 
-Local delivery is complete. The production server was started at `http://localhost:3000` using `npm run start:host`, with the database at `.data/lets-eat.sqlite`. Detailed commands and evidence are in [docs/verification.md](docs/verification.md). Every repository commit uses the user's configured author and committer identity, Limin Yao <isabel0913@gmail.com>.
+## Original origin checks
 
-## Local network access
-
-Opening the app from another computer exposed a configuration mismatch: without `.env.local`, the allowed origin defaulted to `http://localhost:3000`, while the browser used the host computer's LAN address. The create-room form consequently returned `403 WRONG_ORIGIN`.
-
-Set the local `APP_ORIGIN` to the user's browser-facing LAN URL and restarted the production server. Keep that machine-specific setting in the ignored `.env.local`; use the same URL in all browsers. The origin check and application code are unchanged. README and `.env.example` now explain the network configuration and restart requirement.
-
-Verified the original form failure, then successful creation, joining from a separate browser, and vote propagation at the LAN address. An unrelated origin still receives 403. Removed only the temporary test room after verification; existing rooms were preserved.
-
-## Public address on the existing computer
-
-The user supplied `http://24.130.34.221` and clarified that the app should keep port 3000. The canonical address is therefore `http://24.130.34.221:3000`. Set `APP_ORIGIN` to that exact URL in the ignored `.env.local` and restarted the production server, still bound to all interfaces on port 3000 with the same SQLite database. Participants should use this address in their browsers and invite links.
-
-Confirmed that the public URL reaches the app and reproduced `403 WRONG_ORIGIN` before updating the setting. After restarting, Playwright verified room creation, an invite link containing the public address and port, joining and vote propagation across separate browser sessions, and saved preferences and guest identity after reload. The initial HTTP copy fallback exposed the correct invite URL in a manual selection field. Unrelated origins still receive 403. These checks ran from the app host through its public address; only the temporary verification room was removed afterward.
+Early prototype testing exposed an Origin mismatch between the configured server address and the browser, producing `403 WRONG_ORIGIN`. Correcting the configuration restored room creation without weakening the Origin check. Separate-browser checks verified joining, vote propagation, and saved inputs; unrelated origins remained rejected. The prototype addresses and setup instructions are retired. Use the localhost and Render instructions in [docs/deployment.md](docs/deployment.md).
 
 ## Copy invite link
 
 Clicking the copy button should copy the complete link immediately and show “Copied ✓”, with no “Select and copy” field. The shared copy control uses the Clipboard API where available and a temporary offscreen text selection with `document.execCommand("copy")` when it is unavailable or denied. The temporary field is removed and focus restored after the attempt. If copying fails, show an error instead of claiming success. This also applies to copying the meal summary.
 
-Reproduced the visible field on the public HTTP site and added a failing browser regression before changing the component. Verified actual clipboard contents for unavailable and denied Clipboard API cases, and reran the mobile meal-summary journey. Type checking, lint, and the production build passed. After restarting, a browser check through `http://24.130.34.221:3000` confirmed that a single click copies the full invite URL without a visible field; the check removed only its temporary room.
+Reproduced the visible field on the public HTTP site and added a failing browser regression before changing the component. Verified actual clipboard contents for unavailable and denied Clipboard API cases, and reran the mobile meal-summary journey. Type checking, lint, and the production build passed. After restarting, a browser check through the then-configured HTTP prototype confirmed that a single click copies the full invite URL without a visible field; the check removed only its temporary room.
 
 ## Next feature brainstorm
 
@@ -120,7 +108,7 @@ Recommendations for discussion:
 
 - Use a short Google Places list alongside manual proposals. The environment has a `GMAP_KEY` variable; no paid API call or credential change was made during planning. Keep the key on the server, account for field costs and attribution, and separate place references from restricted provider content.
 - Keep SQLite and the existing independent-room model. Use 20 concurrent rooms of eight participants as an initial load-test target, not a capacity claim.
-- Add an in-page result popup first. Closed-page push is a later option requiring HTTPS, permission, supported devices, and durable deadline/delivery processing. The current public HTTP address remains unchanged.
+- Add an in-page result popup first. Closed-page push is a later option requiring HTTPS, permission, supported devices, and durable deadline/delivery processing. Hosting was unchanged during that planning step.
 - “Plan this again” opens an editable new-room draft. Copy meal setup while resetting people, votes, blocks, private preferences, subscriptions, and the deadline.
 - Offer reusable cuisine and budget defaults for the same browser, applied explicitly to each new room. Availability remains specific to a meal; saved defaults never rewrite other room inputs.
 - Prioritize duplicate-place warnings and directions; consider recent rooms, calendar export, and QR invites afterward.
@@ -129,7 +117,7 @@ The new plan includes failure behavior, rollout order, acceptance checks, and of
 
 ## UX review scope clarification
 
-The user narrowed item 6 of [the UX review](docs/feedback/REVIEW.md) to experiencing the result flow quickly. The current HTTP address and port are accepted because DNS is not configured; changing the deployment URL is outside this item. The recommendation is a clearly labeled demo with sample inputs and an immediate result action, reachable from the home page in under one minute. Demo actions remain separate from real rooms and their ten-minute deadline. This records the requested improvement; the demo is not yet implemented.
+The user narrowed item 6 of [the UX review](docs/feedback/REVIEW.md) to experiencing the result flow quickly. The prototype deployment address was outside that review item; the current public host is now Render. The recommendation is a clearly labeled demo with sample inputs and an immediate result action, reachable from the home page in under one minute. Demo actions remain separate from real rooms and their ten-minute deadline. This records the requested improvement; the demo is not yet implemented.
 
 ## UX review implementation
 
@@ -151,7 +139,7 @@ All 17 regular browser scenarios passed against the production build, including 
 
 Before applying migration 0001 to the running host, saved a consistent SQLite backup. Compared checksums over every original column before/after migration: all 4 rooms, 7 participants, 5 options, and 3 responses were preserved exactly, and SQLite integrity/foreign-key checks passed. Restarted the updated production app at the same public address and port.
 
-Public verification passed from the app host through `http://24.130.34.221:3000`: the isolated demo, minimal setup, HTTP invite copy, two-session joining/constraints, an alternative proposal, early finish, same-link new round with preserved preferences/history, stale-round and unrelated-origin rejection, and mobile reload persistence. Inspected desktop/home/result and phone screenshots. Removed only the smoke test's temporary room and rechecked the original data checksums successfully.
+Public verification passed from the app host through the then-configured HTTP prototype: the isolated demo, minimal setup, HTTP invite copy, two-session joining/constraints, an alternative proposal, early finish, same-link new round with preserved preferences/history, stale-round and unrelated-origin rejection, and mobile reload persistence. Inspected desktop/home/result and phone screenshots. Removed only the smoke test's temporary room and rechecked the original data checksums successfully.
 
 Final release verification is complete: the unaccelerated ten-minute test passed in 10.0 minutes. Two sessions received the same winner, the original 600,000 ms deadline stayed unchanged, and the saved closing time equaled that deadline. Combined with the regular suite, all 18 browser scenarios are verified. Reports and deployment evidence are listed in [docs/verification.md](docs/verification.md); all six review improvements are delivered on the existing public host.
 
@@ -169,7 +157,7 @@ This step creates documentation only. The identity/profile implementation and te
 
 ## Implementing browser identity and history
 
-The user authorized implementation of the separate identity/history plan and changed `APP_ORIGIN` to the LAN address `http://192.168.86.52:3000`. Preserve that setting and use it for release checks. The broader next-features plan remains deferred.
+The user authorized implementation of the separate identity/history plan. Release checks at that stage used the original HTTP prototype; its retired address is omitted here. The broader next-features plan remains deferred.
 
 [The implementation spec](docs/identity-and-history-tech-spec.md) defines four additional SQLite tables: browser profiles, hashed credentials, personal room membership, and per-round recommendation signals. Existing guest cookies can adopt legacy memberships explicitly; names and emails never link profiles. Expired/forgotten credentials remain revoked through minimal hash records, preventing old participant records from silently recreating personal access.
 
@@ -183,19 +171,19 @@ The returning-user UI now includes `/me`, saved-default editing, explicit legacy
 
 UI milestone: type checking, lint, and the production build pass. All 23 regular browser scenarios pass, including six new profile/history journeys and the existing voting/round/clipboard/mobile checks. The new tests exercise separate same-named browsers, explicit defaults and overrides, fresh timing and votes, same-room round history, manual no-vote reuse, one-time legacy import, forgetting/expiry/replay, area filtering, and stale/failed recommendation requests. The My meals phone layout was visually inspected.
 
-Before applying migration 0002, saved `.data/pre-browser-profiles-20261023.sqlite`. Checksums of all original columns match after migration for 4 rooms, 7 participants, 5 options, 3 responses, and the empty round archive. Integrity and foreign-key checks pass, and no profiles were created automatically. The updated production process uses the preserved LAN origin. Full-duration deadline and LAN smoke verification are in progress.
+Before applying migration 0002, saved `.data/pre-browser-profiles-20261023.sqlite`. Checksums of all original columns match after migration for 4 rooms, 7 participants, 5 options, 3 responses, and the empty round archive. Integrity and foreign-key checks pass, and no profiles were created automatically. The updated production process uses the then-configured prototype origin. Full-duration deadline and prototype smoke verification are in progress.
 
-LAN release verification passed at `http://192.168.86.52:3000` from the app host with independent desktop/phone browser sessions: creation, joining, explicit saved defaults, two-person early result, separate histories, returning name and suggestions, creating a fresh meal, reload continuity, and unrelated-origin rejection. The new desktop and phone screenshots were inspected. Removed only the two smoke rooms and their profiles/credentials; exact original shared rows still match the backup, and database integrity/foreign-key checks pass. The normal ten-minute deadline test is still running in an isolated test database.
+Prototype release verification passed from the app host with independent desktop/phone browser sessions: creation, joining, explicit saved defaults, two-person early result, separate histories, returning name and suggestions, creating a fresh meal, reload continuity, and unrelated-origin rejection. The new desktop and phone screenshots were inspected. Removed only the two smoke rooms and their profiles/credentials; exact original shared rows still match the backup, and database integrity/foreign-key checks pass. The normal ten-minute deadline test is still running in an isolated test database.
 
 The unaccelerated deadline passed in 10.0 minutes with the original 600,000 ms duration. Both sessions received the same winner and one personal approval/group-pick signal each. The extended restart/backup-restore check also passed: default name/cuisine/budget, ownership, history, result, and recommendation counts survived. These checks used an isolated test database. The last UI refinement gives failed past-idea loads an explicit retry and preserves partially entered option details when adding the recovered idea.
 
-Final delivery: rebuilt production after the retry refinement, passed lint/TypeScript, and reran all six profile browser journeys successfully in 18.6 seconds. All 24 distinct browser scenarios are verified across the regular and release runs. Restarted the final build on the unchanged LAN origin and reran the two-browser smoke successfully; exact original rows still match the backup after cleanup. The completed implementation, usage, lifecycle limits, and evidence are documented in the identity/history plan/spec, README, and verification record. The broader next-features plan remains unchanged.
+Final delivery: rebuilt production after the retry refinement, passed lint/TypeScript, and reran all six profile browser journeys successfully in 18.6 seconds. All 24 distinct browser scenarios are verified across the regular and release runs. Restarted the final build on the then-configured prototype origin and reran the two-browser smoke successfully; exact original rows still match the backup after cleanup. The completed implementation, usage, lifecycle limits, and evidence are documented in the identity/history plan/spec, README, and verification record. The broader next-features plan remains unchanged.
 
 ## Whole-system self-review
 
-The user requested a review before fixes, covering scalability, vulnerabilities, code quality, and outdated documentation. [The review](docs/feedback/self-reflect/REVIEW.md) records prioritized findings and [reproduction evidence](docs/feedback/self-reflect/EVIDENCE.md). Application code, dependencies, migrations, and the running LAN deployment were not changed.
+The user requested a review before fixes, covering scalability, vulnerabilities, code quality, and outdated documentation. [The review](docs/feedback/self-reflect/REVIEW.md) records prioritized findings and [reproduction evidence](docs/feedback/self-reflect/EVIDENCE.md). Application code, dependencies, migrations, and the running prototype deployment were not changed.
 
-Fresh checks passed TypeScript, lint, 24 unit tests, 27 SQLite integration tests, and 23 regular browser scenarios. Bounded isolated HTTP runs with 20 and 100 groups of eight had no request errors; 100 simultaneous test deadlines produced the expected results. These short loopback measurements support retaining SQLite for the current LAN-first scope, not a maximum-capacity claim.
+Fresh checks passed TypeScript, lint, 24 unit tests, 27 SQLite integration tests, and 23 regular browser scenarios. Bounded isolated HTTP runs with 20 and 100 groups of eight had no request errors; 100 simultaneous test deadlines produced the expected results. These short loopback measurements support retaining SQLite for the small-group prototype workload, not a maximum-capacity claim.
 
 The review reproduced oversized request/option admission, an in-flight vote succeeding after browser forgetting, read/health delays behind identity-cleanup write locks, stale personal history after focus, and readiness returning healthy without the profile migration. It also identifies unbounded history work, the known HTTP credential exposure boundary, one development-tool advisory, and specific documentation conflicts. Recommended fixes and acceptance checks are documented for discussion; the broader next-features plan remains deferred.
 
@@ -203,7 +191,7 @@ The review reproduced oversized request/option admission, an in-flight vote succ
 
 The user requested a new branch and technical spec for fixing the self-review findings, and selected an existing Render service at `https://lets-eat-ba8e.onrender.com/`. Created `fix/self-reflect-render` from `9834f5e`. [The remediation spec](docs/self-reflect-remediation-tech-spec.md) covers F1–F8, resource budgets, bounded SQLite/history work, authorization and readiness regressions, and separate local/hosted release checks. The initial step specifies the review fixes. The user subsequently authorized repairing Render configuration and adding version information; those changes are recorded below, while the remaining review implementation follows the spec. The broader next-features plan remains deferred.
 
-Keep one Node service and SQLite on a persistent disk. Authenticated Render API/SSH inspection confirmed 1 CPU / 2 GiB RAM in Virginia. The authorized setup adds a 1 GB persistent disk at `/var/data`; the Blueprint now reflects this allocation. The workstation's 100-group result is not a hosted capacity claim. Target 20 groups of eight first, measure under the actual allocation, and scale vertically if necessary. The selected HTTPS hostname supersedes the earlier public-IP/LAN-only delivery choice; the existing local service and `.env.local` remain untouched.
+Keep one Node service and SQLite on a persistent disk. Authenticated Render API/SSH inspection confirmed 1 CPU / 2 GiB RAM in Virginia. The authorized setup adds a 1 GB persistent disk at `/var/data`; the Blueprint now reflects this allocation. The workstation's 100-group result is not a hosted capacity claim. Target 20 groups of eight first, measure under the actual allocation, and scale vertically if necessary. The selected HTTPS hostname supersedes the earlier prototype hosting choice; the existing local service and `.env.local` remain untouched.
 
 Direct HTTPS/browser verification reached the home page and passed all three demo outcomes. The runtime returned health 503/profile 500; a valid create request returned 403 `WRONG_ORIGIN`. The owner supplied a `no such table: profiles` log and then a failed deployment with `npm run start:host` mistakenly placed in the Build Command field. Documented separate build/start commands, runtime migration on the mounted disk, and the exact HTTPS origin. No room was created by that rejected baseline submission. After the user authorized setup, the configuration was repaired and a separate two-browser hosted smoke passed; see the continuation below.
 
@@ -213,11 +201,11 @@ Operational continuation: the user supplied SSH access and authorized the Render
 
 The user also requested version information. Added a shared-header version link and an uncached, database-independent `/api/version` response with package version and full Render commit; a local run without commit metadata reports `null`. Typecheck, lint, 24 unit, 27 integration, the isolated production build, 23 regular browser cases, and targeted version/mobile checks pass. Saved a consistent off-host backup before deploying this feature; hosted revision/persistence checks follow. These small changes do not implement the remaining self-review remediations.
 
-Final hosted verification passed after deploying `e84208b` from this branch by explicit SHA, without merging to `master`. `/api/version` returns `0.1.0` and the full serving commit; health is 200. Both browser identities, defaults, options, private preferences, and the frozen early result survived the real Render redeploy. The no-vote room closed at its original ten-minute deadline with the same preference-selected winner for both contexts, including history/reload. The desktop/phone version and result screens were checked. Two labeled shared smoke rooms remain; real user data and the LAN host were not changed. Actual Render load testing and recurring off-host backups remain future operating work. The complete evidence is in [verification](docs/verification.md#render-baseline-and-self-review-remediation).
+Final hosted verification passed after deploying `e84208b` from this branch by explicit SHA, without merging to `master`. `/api/version` returns `0.1.0` and the full serving commit; health is 200. Both browser identities, defaults, options, private preferences, and the frozen early result survived the real Render redeploy. The no-vote room closed at its original ten-minute deadline with the same preference-selected winner for both contexts, including history/reload. The desktop/phone version and result screens were checked. Two labeled shared smoke rooms remain; real user data and the prototype host were not changed. Actual Render load testing and recurring off-host backups remain future operating work. The complete evidence is in [verification](docs/verification.md#render-baseline-and-self-review-remediation).
 
 ## Implementing the self-review remediation
 
-The user authorized the full remediation spec, feature-branch publication/deployment, and local plus Render verification. Local setup now targets localhost only; LAN access is not a delivery requirement. Work continues on `fix/self-reflect-render`. Implementation proceeds through request/authorization boundaries, SQLite maintenance/readiness, bounded history and refresh, dependency/header maintenance, then isolated capacity and hosted release verification. Preserve the existing SQLite data and browser identities through migrations and deployments. The broader next-features proposal remains deferred.
+The user authorized the full remediation spec, feature-branch publication/deployment, and local plus Render verification. Local setup now targets localhost only. Work continues on `fix/self-reflect-render`. Implementation proceeds through request/authorization boundaries, SQLite maintenance/readiness, bounded history and refresh, dependency/header maintenance, then isolated capacity and hosted release verification. Preserve the existing SQLite data and browser identities through migrations and deployments. The broader next-features proposal remains deferred.
 
 The first remediation commit adds bounded streaming JSON and request budgets, durable room limits, transaction-time revocation checks, and bounded expiry maintenance outside request reads. Regressions first reproduced a delayed-body write after forgetting; the fix now rejects it. An external SQLite writer leaves ordinary room/profile reads available and produces a retryable 503 for competing writes within the 100 ms lock budget. Local unit/integration, type, and lint checks pass; hosted verification follows the completed application changes.
 
@@ -242,3 +230,7 @@ Invitation implementation `c248d63` passed all 81 unit/integration tests, lint/t
 The three regular hosted checks passed (44.5 seconds), including the P1 group and invitation flows. A trace from the first attempt exposed a test race: a direct read overtook the second vote request. Both writes returned 200; tests now wait for server-backed UI state. Private Playwright artifacts in `.data` are also excluded from lint. Render was deliberately restarted while a separate real-deadline room remained open; a changed instance ID confirmed replacement, and both saved browser contexts retained identity, preferences, votes, history, recommendations, and frozen result. GitHub Actions passed for deployed application commit `c248d63`.
 
 Final release acceptance passed. The invitation build completed the constrained 20-group/160-person ten-minute run with 34,280 requests, 2,040 accepted writes, and no errors/lost writes/missed polls/restarts/OOMs; p95 ordinary latency was 4.422 ms. All 30 local browser scenarios pass across regular and actual ten-minute runs. On Render, the two-of-four expected group closed at the original deadline with the same two-approval result for both browsers after an actual instance restart. The final revision remains `c248d63`; later commits change tests, lint ignores, and documentation only. Both application and test-harness GitHub Actions runs passed. Current deployment instructions, completed review follow-ups, sanitized release/capacity evidence, and historical documentation labels are reconciled. Localhost service and the daily verified off-host backup timer remain enabled; broader next-features work remains deferred.
+
+## Current overview and documentation layout
+
+The user requested a concise APPROACH.md covering the delivered product, decisions and tradeoffs, deliberate omissions, pressure limits, and proposed next work. Renamed the original chronological record to detail_decisions.md and retained its dated milestones. APPROACH.md and README now lead with the public Render URL and instant demo. Setup is documented for localhost and Render; superseded network setup instructions and host addresses are removed, and references to this decision log follow the rename. This changes documentation only. Validation checked relative links and section anchors, matched setup instructions against the npm scripts/environment example/Render configuration, and confirmed the public home, demo, and health endpoints return 200.

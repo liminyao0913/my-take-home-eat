@@ -1,6 +1,6 @@
 # Let's Eat — technical specification
 
-Status: implementation specification. Current progress and verification results are recorded in [APPROACH.md](../APPROACH.md). This spec implements [the product plan](plan.md).
+Status: implementation specification. The current overview is [APPROACH.md](../APPROACH.md); implementation history is recorded in [detail_decisions.md](../detail_decisions.md). This spec implements [the product plan](plan.md).
 
 Identity/history extension: [the separate implementation spec](identity-and-history-tech-spec.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and creator suggestions. Its credential lifecycle and private APIs supersede the original guest-only behavior below; group voting rules remain the same.
 
@@ -330,6 +330,6 @@ Before claiming completion, record the commands and outcomes, the deployed URL, 
 | 5. Complete UI and E2E | Responsive forms, errors, final summary, full browser suite | All required browser journeys pass against the production build and real SQLite. |
 | 6. Local release | Running local app, backup/restore instructions, release browser suite | Local link works across sessions; normal deadline, application restart, and backup restoration are verified. The subsequent Render release follows the remediation spec. |
 
-Commit each coherent milestone using the repository's configured Git identity. Update APPROACH.md when implementation reveals a necessary change to these decisions.
+Commit each coherent milestone using the repository's configured Git identity. Update detail_decisions.md when implementation reveals a necessary change to these decisions, and keep APPROACH.md aligned with the delivered product.
 
 The original local delivery required a working shared room link, restart persistence, matching decision rules, and passing end-to-end checks. The next Render release additionally requires the resource, security, hosted-browser, and persistent-disk gates in the remediation spec.

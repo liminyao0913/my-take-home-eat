@@ -1,6 +1,6 @@
 # Verification
 
-Latest completed verification: October 23, 2026, on `fix/self-reflect-render`. Current setup uses **localhost:3000** locally and **https://lets-eat-ba8e.onrender.com** publicly, with separate SQLite databases. The stack is Node 24.22.1, Next.js 16.4.3, SQLite 3.53.4, and Playwright Chromium. Earlier LAN, deployment-recovery, and version-only observations below are historical records, not current setup instructions.
+Latest completed verification: October 23, 2026, on `fix/self-reflect-render`. Current setup uses **localhost:3000** locally and **https://lets-eat-ba8e.onrender.com** publicly, with separate SQLite databases. The stack is Node 24.22.1, Next.js 16.4.3, SQLite 3.53.4, and Playwright Chromium. Earlier prototype, deployment-recovery, and version-only observations below are historical records, not current setup instructions.
 
 ## Remediation and invitations release
 
@@ -22,7 +22,7 @@ The full dependency audit retains four moderate package entries for one developm
 
 ## Render baseline and self-review remediation
 
-**Historical checkpoint, before the remediation release above.** Statements about unimplemented fixes, the linked `master` branch, and unchanged LAN settings describe that earlier deployment.
+**Historical checkpoint, before the remediation release above.** Statements about unimplemented fixes, the linked `master` branch, and unchanged prototype settings describe that earlier deployment.
 
 Work branch: `fix/self-reflect-render`, based on `9834f5e`. The [technical spec](self-reflect-remediation-tech-spec.md) defines proposed fixes for F1–F8 and the hosted release gates. The user subsequently authorized Render setup and a small version feature. The service settings/Blueprint were corrected; the requested header version and `/api/version` are separate from the proposed review fixes. No dependency, migration, or local environment change was made.
 
@@ -43,7 +43,7 @@ The URL was tested directly from the development machine through curl and headle
 
 The owner supplied a runtime log with `SqliteError: no such table: profiles`, confirming missing schema in the database used by the app. A subsequent supplied deploy log checked out `9834f5e` from `master` but ran `npm run start:host` in the **Build Command** field; it failed because `.next` had no production build. That log identifies a failed deployment attempt, not proof of the revision currently serving requests.
 
-The [deployment guide](deployment.md#recover-the-observed-deployment) gives the correction: build with `npm ci --include=dev && npm run build`, start with `npm run start:host`, set the exact HTTPS `APP_ORIGIN`, and point `DATABASE_PATH` at an attached persistent disk. Subsequent authenticated API/SSH inspection confirmed a 1 CPU / 2 GiB Virginia instance, unset origin/database environment values, an empty fallback SQLite file, no disk, and no health-check path. Those findings informed the recovery recorded below.
+The [deployment guide](deployment.md#readiness-and-release-identity) gives the correction: build with `npm ci --include=dev && npm run build`, start with `npm run start:host`, set the exact HTTPS `APP_ORIGIN`, and point `DATABASE_PATH` at an attached persistent disk. Subsequent authenticated API/SSH inspection confirmed a 1 CPU / 2 GiB Virginia instance, unset origin/database environment values, an empty fallback SQLite file, no disk, and no health-check path. Those findings informed the recovery recorded below.
 
 Local artifacts are in the ignored `.data/render-readiness-20261023/` directory: the probe script, JSON result, and home/demo/create-error/My meals screenshots. The create-error screenshot was visually inspected. The probe made only labeled test submissions, all rejected; no cleanup or production database edits were performed. No load, credential-race, or destructive test ran against Render.
 
@@ -57,13 +57,13 @@ The existing service now has the documented build/start commands, exact HTTPS or
 
 A real Playwright smoke at 18:35 UTC passed creation, full HTTPS clipboard invite, joining from a separate phone context, participant-added options, private/default preferences, concurrent approvals, early finish with identical results, mobile reload continuity, My meals, returning suggestions, and unrelated-Origin rejection. The issued cookie is Secure, HttpOnly, and SameSite=Lax. There were no uncaught browser errors. Two clearly labeled test rooms were created; the second exercised the real ten-minute preference-only case described below. Those shared test rooms remain; no public room-deletion endpoint was added.
 
-Evidence: [render-deployment-20261023.json](feedback/self-reflect/evidence/render-deployment-20261023.json). Private room identifiers, browser storage, screenshots, and scripts stay in `.data/render-live-smoke-20261023/`. A consistent pre-version backup was copied off-host and passed integrity/foreign-key checks; it includes all rows, including a separate user-created room. No real meal data was removed or rewritten, and the LAN database was not copied to Render.
+Evidence: [render-deployment-20261023.json](feedback/self-reflect/evidence/render-deployment-20261023.json). Private room identifiers, browser storage, screenshots, and scripts stay in `.data/render-live-smoke-20261023/`. A consistent pre-version backup was copied off-host and passed integrity/foreign-key checks; it includes all rows, including a separate user-created room. No real meal data was removed or rewritten, and the prototype database was not copied to Render.
 
 ### Version information and local checks
 
 The requested version feature adds a header link and `/api/version`, returning the package version (`0.1.0`) and full `RENDER_GIT_COMMIT`, or `null` if unavailable. The endpoint is uncached and independent of SQLite, so it identifies a release even if readiness fails. Remaining self-review application fixes are still proposed.
 
-Fresh typecheck/lint, 24 unit tests, 27 integration tests, a production build, and all 23 regular browser cases passed with the version change. The regular suite took 1.9 minutes and skipped only its separate ten-minute local case. Build/browser checks used an isolated source copy, leaving the running LAN build intact. Additional checks passed for a 375-pixel version label without overflow, correct JSON/no-store headers, a null local commit fallback, and version availability while health returned 503 against an unmigrated test database.
+Fresh typecheck/lint, 24 unit tests, 27 integration tests, a production build, and all 23 regular browser cases passed with the version change. The regular suite took 1.9 minutes and skipped only its separate ten-minute local case. Build/browser checks used an isolated source copy, leaving the running prototype build intact. Additional checks passed for a 375-pixel version label without overflow, correct JSON/no-store headers, a null local commit fallback, and version availability while health returned 503 against an unmigrated test database.
 
 The version feature was pushed on `fix/self-reflect-render` and deployed explicitly at **`e84208ba2a714cc08536ab3ef856144b003a8e34`**. Render confirmed it live at 18:45 UTC. The linked branch remains `master`, with automatic deploys off; deploying that explicit commit does not merge the feature branch.
 
@@ -78,7 +78,7 @@ The final public-URL check completed at **18:46:02 UTC**. Sanitized results are 
 
 ## Browser identity and personal history
 
-**Historical LAN release evidence.** Current local setup uses localhost only.
+**Historical prototype release evidence.** Current local setup uses localhost only.
 
 The separate [identity/history plan](identity-and-history-plan.md) is implemented. No work from the broader next-features plan is included.
 
@@ -94,7 +94,7 @@ The separate [identity/history plan](identity-and-history-plan.md) is implemente
 | History and reuse | Created/joined/left status, one entry across new rounds, previous outcomes, explicit removal/rejoin, and one-time legacy import verified. No-vote results can be manually reused but produce no recommendation signal. |
 | Network and areas | Failed suggestion requests can be retried without losing manual inputs; old replies are discarded after area changes. Other past areas require an explicit action. |
 | Production migration | Consistent backup made before migration 0002. All original rows retained exactly: 4 rooms, 7 participants, 5 options, 3 responses, and the empty round archive. No automatic profiles/import. Integrity and foreign-key checks pass. |
-| LAN smoke | Passed through `http://192.168.86.52:3000` on the host, using independent desktop/phone sessions: creation/join, remembered preferences, shared early result, separate histories, recommendations, fresh new meal, reload, and origin rejection. No browser console errors. Desktop and mobile screenshots inspected. |
+| Prototype smoke | Passed on the original HTTP host, using independent desktop/phone sessions: creation/join, remembered preferences, shared early result, separate histories, recommendations, fresh new meal, reload, and origin rejection. No browser console errors. Desktop and mobile screenshots inspected. |
 | Cleanup | Only the two temporary smoke rooms and their profiles/credentials removed. Original shared rows exactly match the pre-migration backup. No production deadline was edited. |
 | Unaccelerated deadline | Passed in 10.0 minutes. Both sessions received the same frozen winner with the original 600,000 ms deadline and one personal approval/group-pick signal each. |
 | Extended restart and restore check | Passed. Default name/cuisine/budget, guest ownership, personal history, frozen result, and recommendation counts survived restarting the app and serving the consistent backup. The two release tests passed in 10.2 minutes. |
@@ -104,17 +104,17 @@ Current local evidence (ignored by Git):
 - Regular browser report: `.data/browser-profiles-regular-report/index.html`.
 - Unaccelerated deadline and extended restore report: `.data/browser-profiles-deadline-report/index.html`.
 - Final profile UI report: `.data/browser-profiles-final-ui-report/index.html` (also the latest `playwright-report/index.html`).
-- LAN smoke script and result: `.data/browser-profiles-lan-smoke.mjs`, `.data/browser-profiles-lan-smoke.json`.
+- Prototype smoke script and result: `.data/browser-profiles-lan-smoke.mjs`, `.data/browser-profiles-lan-smoke.json`.
 - Screenshots: `.data/browser-profiles-my-meals-mobile.png`, `.data/browser-profiles-lan-home.png`, `.data/browser-profiles-lan-mobile.png`.
 - Pre-migration backup: `.data/pre-browser-profiles-20261023.sqlite`; shared-row checksums: `.data/pre-browser-profiles-shared-rows.json`.
 
 The first cleanup checksum assertion compared Python and JavaScript JSON serialization and reported a mismatch. Rechecking with the baseline serializer and direct row comparison confirmed every original row was unchanged; the smoke script now compares rows directly.
 
-All 24 distinct browser scenarios are verified across the regular, full-duration, and final UI runs. The production process was restarted with the final build, and the two-browser LAN smoke passed again with its direct backup comparison. No remote CI or public-address run is claimed for this LAN release.
+All 24 distinct browser scenarios are verified across the regular, full-duration, and final UI runs. The production process was restarted with the final build, and the two-browser prototype smoke passed again with its direct backup comparison. No remote CI or public-address run is claimed for this prototype release.
 
 ## UX review improvements
 
-The six review improvements were verified on October 22 at the then-configured public address. They remain in the product; this section records the earlier public-IP/LAN release. See the [review follow-up](feedback/REVIEW.md#implementation-follow-up) for the feature-to-test mapping.
+The six review improvements were verified on October 22 at the then-configured public address. They remain in the product; this section records the earlier HTTP prototype release. See the [review follow-up](feedback/REVIEW.md#implementation-follow-up) for the feature-to-test mapping.
 
 | Check | Outcome |
 | --- | --- |
@@ -154,8 +154,7 @@ Current local evidence (ignored by Git):
 | Backup restoration | A backup of the running database served the same room, identity, and frozen result in a new process. |
 | Deployment startup command | Applied migrations to a fresh local database, passed readiness, and accepted room creation using the configured origin. |
 | Render Blueprint | Validated against Render's official JSON Schema. No deployment performed. |
-| LAN access configuration | Reproduced the localhost/LAN origin mismatch, set the browser-facing origin, and verified room creation, joining, and voting through the LAN address. Unrelated origins still receive 403. |
-| Public address configuration | Set `APP_ORIGIN=http://24.130.34.221:3000` and restarted the app on port 3000. Playwright on the app host verified creation, the public invite URL and HTTP copy fallback, joining, vote propagation, and identity/preferences after reload through that URL. Unrelated origins still receive 403. Removed only the temporary verification room. |
+| Origin configuration (historical) | Reproduced a browser/server origin mismatch and verified its configuration fix through creation, copied invites, joining, voting, and reload continuity. Unrelated origins still received 403. Retired addresses and setup instructions are omitted; current setup uses localhost and Render. |
 | Copy button fix | Reproduced the manual selection field before the fix. Clipboard regressions for unavailable and denied Clipboard API access, plus the existing mobile meal-summary journey, passed. All read actual clipboard contents. Type checking, lint, and a fresh production build passed. After restart, verified that one click on the public HTTP site copies the entire invite URL, shows “Copied ✓”, restores focus, and leaves no text field. |
 
 The full-duration browser test used two isolated browser sessions, retained the original ten-minute deadline, and confirmed that the saved closing time equals that deadline. It did not alter the database deadline or mock the clock. Routine browser cases accelerate only their own room in an isolated test SQLite file; the application has no deadline-changing endpoint.

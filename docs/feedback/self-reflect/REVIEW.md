@@ -2,11 +2,11 @@
 
 Reviewed October 23, 2026, against commit `0353851`. Scope: application code, SQLite access, browser behavior, dependencies, deployment configuration, tests, and documentation. The findings below describe the unfixed baseline at review time.
 
-Follow-up: the user subsequently selected Render hosting. The [remediation spec](../../self-reflect-remediation-tech-spec.md) maps F1–F8 to implementation and acceptance checks, and [hosted verification](../../verification.md#remediation-and-invitations-release) records delivery. Render HTTPS and Secure cookies now address F7's transport prerequisite; the F1–F7 application fixes are now implemented on `fix/self-reflect-render`, with local regression/browser evidence. F8's compatible patch update is applied; the remaining development-only upstream advisory is documented. Final deployment/capacity acceptance now passes and is recorded in verification, including the subsequently authorized P1 invitation and three-browser checks. The LAN observations and capacity measurements below remain historical evidence for the reviewed deployment.
+Follow-up: the user subsequently selected Render hosting. The [remediation spec](../../self-reflect-remediation-tech-spec.md) maps F1–F8 to implementation and acceptance checks, and [hosted verification](../../verification.md#remediation-and-invitations-release) records delivery. Render HTTPS and Secure cookies now address F7's transport prerequisite; the F1–F7 application fixes are now implemented on `fix/self-reflect-render`, with local regression/browser evidence. F8's compatible patch update is applied; the remaining development-only upstream advisory is documented. Final deployment/capacity acceptance now passes and is recorded in verification, including the subsequently authorized P1 invitation and three-browser checks. The prototype observations and capacity measurements below remain historical evidence for the reviewed deployment. Retired network addresses and setup recommendations have been removed; current operation is documented for localhost and Render.
 
-The service can support several groups on the current machine. Bounded tests with 20 and 100 groups of eight completed without request errors. **Keep SQLite for the current LAN-first product.** The immediate problems are missing resource limits, an in-flight credential-revocation race, and work that grows without bounds as history accumulates. The present implementation should not be treated as ready for unrestricted public traffic.
+The service can support several groups on the current machine. Bounded tests with 20 and 100 groups of eight completed without request errors. **Keep SQLite for this small-group workload.** The immediate problems are missing resource limits, an in-flight credential-revocation race, and work that grows without bounds as history accumulates. The present implementation should not be treated as ready for unrestricted public traffic.
 
-All mutation probes and load tests used temporary databases and a separate loopback-only server. The running LAN service was not restarted or reconfigured. Detailed methods and limitations are in [EVIDENCE.md](EVIDENCE.md); measured results are in [review-results.json](evidence/review-results.json).
+All mutation probes and load tests used temporary databases and a separate loopback-only server. The running prototype service was not restarted or reconfigured. Detailed methods and limitations are in [EVIDENCE.md](EVIDENCE.md); measured results are in [review-results.json](evidence/review-results.json).
 
 ## Findings and priority
 
@@ -20,7 +20,7 @@ P1 means address before opening the service to untrusted public traffic. P2 mean
 | F4 | P2 | History pagination does not bound the work or response size inside each page | Full room snapshots, all previous rounds, and all personal room signals are loaded per history entry. Static finding. |
 | F5 | P2 | Readiness can report healthy with an incomplete schema | With migrations 0000/0001 only, health returned 200 while the profile endpoint returned 500. |
 | F6 | P2 | Personal meal lists remain stale after focus | The server had a closed result while My meals still displayed Open after a confirmed focus refresh. |
-| F7 | P1 for public access | HTTP exposes the durable browser credential to network interception | Current LAN origin is HTTP; the cookie is Secure only for an HTTPS origin. Known operating limitation. |
+| F7 | P1 for public access | HTTP exposes the durable browser credential to network interception | The reviewed prototype used HTTP; the cookie is Secure only for an HTTPS origin. Known operating limitation. |
 | F8 | P3 | One development-tool advisory and an available framework patch need maintenance | Production audit: zero reported advisories. Full audit: four package entries from one esbuild advisory. |
 
 ### F1. Bound resource use before allowing untrusted traffic
@@ -29,7 +29,7 @@ P1 means address before opening the service to untrusted public traffic. P2 mean
 
 The isolated probe submitted 200 valid options plus a large unknown field. It received 201 and persisted all 200 options. Zod strips the unknown field after parsing; the server still has to receive and parse it. This demonstrates admission of oversized work, not an observed production outage. Repeated anonymous requests can consume disk and the shared process's CPU/memory. Supplying the expected Origin is easy for a non-browser client; Origin checking provides browser CSRF protection, not abuse prevention.
 
-The original [product plan](../../plan.md#L112) intentionally avoided option caps. That trusted-group simplification needs a resource budget before public exposure. Choose explicit limits for body bytes, options per room/round, participants, active rooms, and request frequency. Enforce streamed-body limits as well as any Content-Length check, reject oversized requests with 413, and throttle excess work with 429. Account for friends sharing one LAN/NAT when setting IP limits. [OWASP DoS guidance](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html) supports bounding input and resource consumption.
+The original [product plan](../../plan.md#L112) intentionally avoided option caps. That trusted-group simplification needs a resource budget before public exposure. Choose explicit limits for body bytes, options per room/round, participants, active rooms, and request frequency. Enforce streamed-body limits as well as any Content-Length check, reject oversized requests with 413, and throttle excess work with 429. Account for friends sharing one network/NAT when setting IP limits. [OWASP DoS guidance](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html) supports bounding input and resource consumption.
 
 Acceptance: oversized and chunked requests are rejected before large parsing/insertion; excessive room/option creation is bounded; legitimate groups sharing an address still work.
 
@@ -87,11 +87,11 @@ Acceptance: closing/creating/restarting a room elsewhere is reflected on return 
 
 ## Security posture and dependencies
 
-### F7. Preserve the LAN-first decision, but make the transport boundary explicit
+### F7. Require encrypted transport for public access
 
-The current site uses `http://192.168.86.52:3000`. Its bearer cookie grants editing access plus personal history/defaults for up to 180 idle days. [HttpOnly and SameSite are set](../../../src/server/identity.ts#L23), but Secure is conditional on HTTPS. A party able to intercept HTTP traffic can obtain a usable credential; HttpOnly does not encrypt it. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#transport-layer-security).
+The reviewed prototype used HTTP. Its bearer cookie grants editing access plus personal history/defaults for up to 180 idle days. [HttpOnly and SameSite are set](../../../src/server/identity.ts#L23), but Secure is conditional on HTTPS. A party able to intercept HTTP traffic can obtain a usable credential; HttpOnly does not encrypt it. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#transport-layer-security).
 
-This is a known limitation of a trusted-LAN prototype. Before using an address reachable by untrusted clients, add TLS, restrict direct insecure access, and apply F1/F2. The issue is transport exposure; this review does not require buying DNS or changing the preferred LAN deployment.
+This was a transport limitation of the prototype. Public access requires TLS, restricted direct insecure access, and the F1/F2 fixes. Render HTTPS and the later remediation address this finding; the original observation remains evidence for the earlier release.
 
 The inspected HTML response also lacked CSP/frame restrictions. Frame-embedding protection is a sensible additional control before public exposure; no clickjacking or XSS exploit was demonstrated in this review. [OWASP framing guidance](https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html).
 
@@ -133,30 +133,30 @@ The decision function is separate from persistence, contracts are shared, transa
 
 The main quality weaknesses are behavioral boundaries rather than missing abstractions: authorization spans the route/body-read/service boundary, history depends on full public-room snapshots, and profile/list refresh lifecycles differ. Fix these with focused tests before cosmetic restructuring. Several components also contain very long JSX lines, and past-idea conversion is duplicated in [CreateRoom](../../../src/components/create-room.tsx#L48); formatting and a small shared conversion helper would make later reviews easier, but are lower priority than the findings above.
 
-The repository supplies backup/restore commands and tested restoration, but its deployment guide concentrates on deferred Render hosting. A reproducible LAN service/restart procedure, recurring off-host backup policy, disk-space monitoring, and request/error latency visibility are not provided as a complete operating procedure. OS-wide supervision, router/firewall rules, and external backup arrangements were not audited. Document and verify those before relying on the service for sustained use.
+The repository supplies backup/restore commands and tested restoration, but its deployment guide concentrates on deferred Render hosting. A reproducible local service/restart procedure, recurring off-host backup policy, disk-space monitoring, and request/error latency visibility are not provided as a complete operating procedure. OS-wide supervision, router/firewall rules, and external backup arrangements were not audited. Document and verify those before relying on the service for sustained use.
 
 The existing tests missed the body-read/revocation interleaving, a missing profile migration at readiness, and personal-list freshness after focus. Passing the release suite established many functional behaviors; it did not establish abuse resistance or capacity.
 
 ## Outdated or conflicting documentation
 
-The latest README correctly prefers LAN access, permits trying a public address if needed, and describes browser profiles. The identity/history spec and current verification section are substantially aligned with implementation. The following documents need targeted reconciliation in a later change:
+At review time, README described the prototype deployment and browser profiles. The table records the documentation gaps found then; subsequent fixes and current localhost/Render setup are linked above.
 
 | Document | Drift | Suggested correction |
 | --- | --- | --- |
 | [docs/plan.md:5](../../plan.md#L5), [116](../../plan.md#L116), [165](../../plan.md#L165) | Calls this the existing product, sends reusable preferences to the future plan, says all preferences are room-only, and defers saved profiles. | Link the implemented identity/history extension; distinguish reusable defaults from per-room copies; remove saved profiles from the current deferred list. |
-| [docs/tech-spec.md:15](../../tech-spec.md#L15), [22](../../tech-spec.md#L22), [25](../../tech-spec.md#L25) | Says two pages, polling only while open, and Render as the hosting choice. Later text already describes demo/closed-room polling and deferred hosting. | List the current routes including `/me`, describe visible polling after closure, and make LAN the current deployment with Render optional. |
-| [docs/feedback/REVIEW.md:11](../REVIEW.md#L11) | The follow-up says the public address remains unchanged, while the current canonical origin is LAN. | Mark that follow-up explicitly as historical and point to the current README/verification record. Preserve its dated screenshots and old test counts as historical evidence. |
+| [docs/tech-spec.md:15](../../tech-spec.md#L15), [22](../../tech-spec.md#L22), [25](../../tech-spec.md#L25) | Says two pages, polling only while open, and Render as the hosting choice. Later text already describes demo/closed-room polling and deferred hosting. | List the current routes including `/me`, describe visible polling after closure, and document localhost setup separately from the selected Render deployment. |
+| [docs/feedback/REVIEW.md:11](../REVIEW.md#L11) | The follow-up says the public address remains unchanged, despite a later change of canonical origin. | Mark that follow-up explicitly as historical and point to the current README/verification record. Preserve its dated screenshots and old test counts as historical evidence. |
 | [docs/next-features-plan.md:3](../../next-features-plan.md#L3), [180](../../next-features-plan.md#L180) | Broadly calls recommendations unimplemented and still defers recent rooms, participation counts, and early finish, which later releases delivered. | Add a superseded/implemented-elsewhere note with links. Leave discovery, notifications, copying whole rooms, and other deferred work outside scope. |
-| [docs/deployment.md:3](../../deployment.md#L3) | Explicitly describes future Render deployment, with no complete procedure for the preferred LAN service. | Add a LAN operations section; retain Render as a separate future path. |
+| [docs/deployment.md:3](../../deployment.md#L3) | Explicitly describes future Render deployment, with no complete procedure for local operation. | Document localhost operation and Render deployment separately. |
 | [docs/tech-spec.md:161](../../tech-spec.md#L161) | Promises readiness verifies migration state. | Fix F5 and keep the promise, or explicitly document the current limitation until it is fixed. |
 
-`APPROACH.md` and the older verification sections are chronological records. Their past-tense milestones are not automatically stale; use a clear current-state pointer rather than rewriting history. No deferred feature implementation is proposed by this documentation review.
+`detail_decisions.md` and the older verification sections are chronological records; `APPROACH.md` is the current overview. Their past-tense milestones are not automatically stale; use a clear current-state pointer rather than rewriting history. No deferred feature implementation is proposed by this documentation review.
 
 ## Suggested next work
 
 1. Fix F2 and add delayed-body revocation/expiry regressions. Add F1 limits and abuse tests before considering public access.
-2. Fix F3 and F5, then repeat contention and readiness checks. Keep SQLite and the current LAN origin.
+2. Fix F3 and F5, then repeat contention and readiness checks. Keep SQLite and verify the exact configured origin.
 3. Bound history work and refresh personal lists. Test long-lived history, multiple tabs, and preservation of form drafts.
-4. Reconcile the documentation inventory, update compatible tooling deliberately, and document the LAN operating procedure.
+4. Reconcile the documentation inventory, update compatible tooling deliberately, and document localhost and Render operating procedures.
 
 The HTTP/TLS decision in F7 is a prerequisite to untrusted public access, not a request to change the current deployment as part of this review.

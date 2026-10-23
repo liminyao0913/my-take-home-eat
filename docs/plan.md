@@ -192,4 +192,4 @@ Check the flow on separate devices, and ask a small trial group to explain why t
 
 ## 8. Implementation and verification
 
-The [technical spec](tech-spec.md) defines the UI, backend, SQLite database, deadline handling, deployment, and end-to-end tests. Its deadline design closes the room logically at the cutoff and saves the immutable result on the first subsequent request, so closure does not depend on an open browser. Record decisions and tradeoffs in [APPROACH.md](../APPROACH.md) as implementation proceeds.
+The [technical spec](tech-spec.md) defines the UI, backend, SQLite database, deadline handling, deployment, and end-to-end tests. Its deadline design closes the room logically at the cutoff and saves the immutable result on the first subsequent request, so closure does not depend on an open browser. Record detailed decisions and tradeoffs in [detail_decisions.md](../detail_decisions.md); keep the current summary in [APPROACH.md](../APPROACH.md).

@@ -25,7 +25,7 @@ Node 24.22.1 was explicitly selected for the commands. Browser and HTTP checks u
 
 Routine Playwright tests used the repository's temporary SQLite paths on ports 3100/3101. Additional review probes started one separate production-mode Next.js process bound to `127.0.0.1:3102`, with `DATABASE_PATH` under a newly created `/tmp/lets-eat-self-reflect-*` directory and `APP_ORIGIN=http://127.0.0.1:3102`. The extra process and temporary databases were removed when each probe finished. No production deadlines, profiles, rooms, or credentials were changed.
 
-The live LAN origin was used only for read-only HTML headers and health checks. Its HTML response had no CSP or X-Frame-Options header. No router/firewall examination, external attack, provider call, or Google API request was performed.
+The then-live HTTP prototype was used only for read-only HTML headers and health checks. Its HTML response had no CSP or X-Frame-Options header. No router/firewall examination, external attack, provider call, or Google API request was performed.
 
 Committed evidence contains no browser tokens or real meal records:
 
