@@ -1,0 +1,61 @@
+{
+  "reviewDate": "2026-10-23",
+  "commands": [
+    "npm audit --json",
+    "npm audit --omit=dev --json",
+    "npm outdated --json"
+  ],
+  "productionAdvisoryCounts": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "fullAdvisoryCounts": {
+    "info": 0,
+    "low": 0,
+    "moderate": 4,
+    "high": 0,
+    "critical": 0,
+    "total": 4
+  },
+  "advisories": [
+    {
+      "id": "GHSA-67mh-4wv8-2f99",
+      "severity": "moderate",
+      "installedAffectedEsbuild": "0.18.20",
+      "chain": [
+        "drizzle-kit",
+        "@esbuild-kit/esm-loader",
+        "@esbuild-kit/core-utils",
+        "esbuild"
+      ],
+      "context": "Development dependency; advisory concerns the esbuild development server. No use of that server was found in the application.",
+      "primarySource": "https://github.com/evanw/esbuild/security/advisories/GHSA-67mh-4wv8-2f99",
+      "auditSuggestedFix": {
+        "name": "drizzle-kit",
+        "version": "0.18.1",
+        "isSemVerMajor": true
+      },
+      "fixApplied": false
+    }
+  ],
+  "patchUpdate": {
+    "packages": [
+      "next",
+      "eslint-config-next"
+    ],
+    "installed": "16.4.2",
+    "reportedWanted": "16.4.3",
+    "release": "https://github.com/vercel/next.js/releases/tag/v16.4.3",
+    "securityFixClaimed": false
+  },
+  "majorVersionsReportedNewer": [
+    "@types/node: 26.6.5",
+    "eslint: 10.13.0",
+    "typescript: 7.0.2"
+  ],
+  "note": "Newer major versions are not evidence of a vulnerability; the project targets Node 24."
+}

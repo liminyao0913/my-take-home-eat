@@ -1,0 +1,123 @@
+{
+  "reviewedAt": "2026-10-23T17:32:10.176Z",
+  "sourceCommit": "0353851",
+  "environment": {
+    "node": "v24.22.1",
+    "sqlite": "3.53.4",
+    "cpu": "Intel(R) Core(TM) Ultra 9 275HX",
+    "logicalCpus": 24,
+    "availableParallelism": 24,
+    "memoryGiB": 62.2,
+    "origin": "http://127.0.0.1:3102",
+    "productionDatabaseUsed": false
+  },
+  "probes": {
+    "inputBudget": {
+      "status": 201,
+      "requestBytes": 2120058,
+      "optionsRequested": 200,
+      "optionsStored": 200
+    },
+    "readDuringWriteLock": {
+      "externalLockMs": 1200,
+      "rawSqliteReadMs": 0.16,
+      "roomHttpStatus": 200,
+      "roomHttpMs": 1238.8,
+      "healthHttpStatus": 200,
+      "healthHttpMs": 1140.38
+    },
+    "revocationRace": {
+      "authenticatedBeforeBody": true,
+      "forgetStatus": 200,
+      "delayedMutationStatus": 200,
+      "delayedResponseHasIdentity": true,
+      "freshReplayStatus": 401,
+      "freshReadHasIdentity": false,
+      "approvalCountAfterForget": 1
+    },
+    "historyRefresh": {
+      "visibleStatusAfterFocus": "Open",
+      "serverState": "closed"
+    },
+    "incompleteSchemaReadiness": {
+      "schema": "Committed migrations 0000 and 0001 only; migration 0002 intentionally omitted in a temporary database.",
+      "healthStatus": 200,
+      "healthBody": {
+        "status": "ok"
+      },
+      "profileStatus": 500,
+      "profileBody": {
+        "code": "SERVER_ERROR",
+        "message": "Something went wrong. Please try again."
+      }
+    }
+  },
+  "load": [
+    {
+      "groups": 20,
+      "participants": 160,
+      "durationSeconds": 30,
+      "scheduledPolls": 1600,
+      "skippedPolls": 0,
+      "completedRequests": 1760,
+      "requestsPerSecond": 58.66,
+      "non200": 0,
+      "peakServerRssMiB": 268.5,
+      "poll": {
+        "requests": 1600,
+        "p50Ms": 2.53,
+        "p95Ms": 3.02,
+        "p99Ms": 3.51,
+        "maxMs": 8.8
+      },
+      "vote": {
+        "requests": 160,
+        "p50Ms": 3.44,
+        "p95Ms": 9.51,
+        "p99Ms": 16.82,
+        "maxMs": 22.44
+      }
+    },
+    {
+      "groups": 100,
+      "participants": 800,
+      "durationSeconds": 30,
+      "scheduledPolls": 8000,
+      "skippedPolls": 0,
+      "completedRequests": 8800,
+      "requestsPerSecond": 293.29,
+      "non200": 0,
+      "peakServerRssMiB": 331.7,
+      "poll": {
+        "requests": 8000,
+        "p50Ms": 1.34,
+        "p95Ms": 2.18,
+        "p99Ms": 4.12,
+        "maxMs": 20.63
+      },
+      "vote": {
+        "requests": 800,
+        "p50Ms": 3.09,
+        "p95Ms": 4.05,
+        "p99Ms": 5.21,
+        "maxMs": 8.38
+      }
+    }
+  ],
+  "simultaneousDeadline": {
+    "rooms": 100,
+    "correctResults": 100,
+    "non200": 0,
+    "p95Ms": 321.51,
+    "p99Ms": 354.29,
+    "fixture": "Deadlines changed only in the temporary review database."
+  },
+  "integrity": {
+    "integrityCheck": [
+      {
+        "integrity_check": "ok"
+      }
+    ],
+    "foreignKeyErrors": 0
+  }
+}
