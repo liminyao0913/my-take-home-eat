@@ -6,6 +6,8 @@ The current changes and rationale are in [UX review implementation](#ux-review-i
 
 The proposed next release is described in [docs/next-features-plan.md](docs/next-features-plan.md). Its recommendations extend the existing baseline; they are not implemented behavior.
 
+The separate [identity and history plan](docs/identity-and-history-plan.md) records the October 23 discussion about remembered users, reusable preferences, personal room history, and suggestions for new meals. Work on the broader next-features plan remains deferred.
+
 ## Confirmed direction
 
 - Start from zero and clarify product behavior before choosing technology.
@@ -152,3 +154,15 @@ Before applying migration 0001 to the running host, saved a consistent SQLite ba
 Public verification passed from the app host through `http://24.130.34.221:3000`: the isolated demo, minimal setup, HTTP invite copy, two-session joining/constraints, an alternative proposal, early finish, same-link new round with preserved preferences/history, stale-round and unrelated-origin rejection, and mobile reload persistence. Inspected desktop/home/result and phone screenshots. Removed only the smoke test's temporary room and rechecked the original data checksums successfully.
 
 Final release verification is complete: the unaccelerated ten-minute test passed in 10.0 minutes. Two sessions received the same winner, the original 600,000 ms deadline stayed unchanged, and the saved closing time equaled that deadline. Combined with the regular suite, all 18 browser scenarios are verified. Reports and deployment evidence are listed in [docs/verification.md](docs/verification.md); all six review improvements are delivered on the existing public host.
+
+## Browser identity and personal meal history plan
+
+The user requested a separate plan for persistent preferences, each person's room history, and recommendations when creating another meal. They clarified that any email identifier would be unverified, with no verification messages, and asked to keep this work separate from `next-features-plan.md`.
+
+After comparing email-only lookup with browser continuity, the user selected **automatic browser identity, with history tied to that browser**. A different computer/browser starts a separate profile. Email lookup, verification, and device recovery are outside this first release. The service recognizes possession of the browser credential, not a verified real-world person.
+
+The proposed product adds remembered cuisine/budget defaults, a personal **My meals** view, and up to three editable suggestions from known past approvals and approved group picks. Defaults are saved explicitly and visibly applied when creating/joining a new room; time windows, votes, constraints, and readiness stay meal-specific. Historical suggestions never become automatic votes or change the group's decision algorithm.
+
+The plan also defines forgetting a browser, removing a room from personal history, empty-history behavior, and a migration boundary: existing round archives contain aggregate results, so missing individual votes must not be invented. Future personal recommendation records must be captured before another round deletes its old options/responses. SQLite remains the storage choice. The plan compares other identity options and notes the current HTTP transport limitation without changing hosting.
+
+This step creates documentation only. The identity/profile implementation and technical spec remain future work; [docs/identity-and-history-plan.md](docs/identity-and-history-plan.md) contains the proposed flows, ranking rules, staged delivery, and acceptance checks.
