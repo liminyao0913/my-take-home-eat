@@ -1,5 +1,5 @@
 import { useId, type InputHTMLAttributes, type ReactNode } from "react";
-import { CUISINES, PRICE_LABELS, type ApiErrorBody, type OptionInput } from "@/lib/contracts";
+import { CUISINES, PRICE_LABELS, type ApiErrorBody, type OptionInput, type SavedPreferences } from "@/lib/contracts";
 
 export function Field({ label, error, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string[]; hint?: string }) {
   const id = useId();
@@ -17,6 +17,10 @@ export function Select({ label, children, error, ...props }: React.SelectHTMLAtt
 
 export function FormError({ error }: { error: ApiErrorBody | null }) {
   return error ? <p className="error-box" role="alert">{error.message}</p> : null;
+}
+
+export function CuisineBudgetFields({ value, onChange }: { value: SavedPreferences; onChange: (value: SavedPreferences) => void }) {
+  return <div className="cuisine-budget-fields"><fieldset className="cuisine-picker"><legend>Cuisines you like</legend><div className="chips">{CUISINES.map((cuisine) => <label key={cuisine} className={value.cuisines.includes(cuisine) ? "chip checked" : "chip"}><input type="checkbox" checked={value.cuisines.includes(cuisine)} onChange={(event) => onChange({ ...value, cuisines: event.target.checked ? [...value.cuisines, cuisine] : value.cuisines.filter((item) => item !== cuisine) })} />{cuisine}</label>)}</div></fieldset><Select label="Preferred price ceiling" value={value.maxPriceLevel ?? ""} onChange={(event) => onChange({ ...value, maxPriceLevel: event.target.value ? Number(event.target.value) : null })}><option value="">Any price</option>{[1, 2, 3].map((n) => <option key={n} value={n}>{"$".repeat(n)} · {PRICE_LABELS[n]}</option>)}</Select></div>;
 }
 
 export const emptyOption = (): OptionInput => ({ placeName: "", location: "", cuisine: null, priceLevel: null, startTime: "12:30", link: "" });

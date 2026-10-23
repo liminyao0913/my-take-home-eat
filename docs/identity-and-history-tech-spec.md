@@ -6,7 +6,7 @@ Implements [the product plan](identity-and-history-plan.md), using the existing 
 
 Add four tables: `profiles` (name, cuisine/budget defaults), `browser_credentials` (hashed cookie, optional profile ID, expiry, one-time legacy-import eligibility), `profile_rooms` (profile/room membership, participant ID, creator/joiner role, hidden flag), and `profile_rounds` (one personal signal snapshot per profile/room/round).
 
-The existing guest cookie remains the credential. New profiles are created only by successful room creation/joining or an explicit legacy import. Room viewing and the demo create neither profiles nor memberships. A profile ID, display name, or email is never an access credential.
+The existing guest cookie remains the credential. New profiles are created only by successful room creation/joining, an explicit legacy import, or explicitly remembering preferences from an existing room. Room viewing and the demo create neither profiles nor memberships. A profile ID, display name, or email is never an access credential.
 
 Migration registers existing participant token hashes as legacy credentials, with a 30-day adoption window. It does not infer creator roles or import preferences/history automatically. New profile credentials expire after 180 idle days. Recognized profile activity renews expiry at most once per day; the response cookie uses the same absolute expiry. Requests prune expired profiles and their personal records. Credential hashes remain as minimal revocation records, so replaying a forgotten/expired credential cannot restore old room ownership or trigger legacy import. Deletion does not change shared participants, votes, or frozen results.
 

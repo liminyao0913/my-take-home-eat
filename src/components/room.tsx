@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { errorDetails, formatDate } from "@/lib/client";
-import { type ApiErrorBody, type RoomSnapshot } from "@/lib/contracts";
+import { type ApiErrorBody, type RoomSnapshot, type SavedPreferences } from "@/lib/contracts";
 import { CopyButton } from "./copy-button";
 import { emptyOption, Field, FormError, OptionFields } from "./forms";
 import { MealCard, MealResult } from "./meal";
 import { NewRound } from "./new-round";
 import { PreferenceForm } from "./preferences";
 import { useRoom, type Mutate } from "./use-room";
+import { useProfile } from "./use-profile";
+import { blankPreferences, hasSavedPreferences, SavedPreferenceChoice } from "./saved-preferences";
 
 function Countdown({ data, receivedAt, refresh }: { data: RoomSnapshot; receivedAt: number; refresh: () => Promise<void> }) {
   const [clock, setClock] = useState({ receivedAt: 0, elapsed: 0 });
@@ -29,13 +31,18 @@ function Countdown({ data, receivedAt, refresh }: { data: RoomSnapshot; received
 
 function JoinForm({ busy, mutate }: { busy: boolean; mutate: Mutate }) {
   const [error, setError] = useState<ApiErrorBody | null>(null);
+  const { data } = useProfile();
+  const [chosen, setChosen] = useState<SavedPreferences | null>(null);
+  const [useSaved, setUseSaved] = useState<boolean | null>(null);
+  const selected = chosen ?? data?.profile?.preferences ?? blankPreferences;
+  const enabled = useSaved ?? hasSavedPreferences(selected);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(null);
     const displayName = new FormData(event.currentTarget).get("displayName");
-    try { await mutate("/participants", "POST", { displayName }); }
+    try { await mutate("/participants", "POST", { displayName, preferences: data?.profile && enabled ? selected : undefined }); }
     catch (error) { setError(errorDetails(error)); }
   }
-  return <section id="join" className="panel join-panel"><h2>Pull up a chair</h2><p className="muted">Add your name to vote, share preferences, or suggest a meal.</p><form onSubmit={submit}><fieldset disabled={busy}><Field label="Your name" name="displayName" autoComplete="given-name" maxLength={40} placeholder="What should we call you?" required error={error?.fieldErrors?.displayName} /><FormError error={error} /><button className="button primary" type="submit">Join the table</button></fieldset></form></section>;
+  return <section id="join" className="panel join-panel"><h2>Pull up a chair</h2><p className="muted">Add your name to vote, share preferences, or suggest a meal.</p><form onSubmit={submit}><fieldset disabled={busy}><Field label="Your name" name="displayName" defaultValue={data?.profile?.displayName ?? ""} autoComplete="given-name" maxLength={40} placeholder="What should we call you?" required error={error?.fieldErrors?.displayName} />{data?.profile && <SavedPreferenceChoice value={selected} enabled={enabled} onToggle={setUseSaved} onChange={setChosen} />}<FormError error={error} /><button className="button primary" type="submit">Join the table</button><p className="hint">Your meals are remembered in this browser.</p></fieldset></form></section>;
 }
 
 function AddOption({ data, busy, mutate, detailsRef }: { data: RoomSnapshot; busy: boolean; mutate: Mutate; detailsRef: RefObject<HTMLDetailsElement | null> }) {
