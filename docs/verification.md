@@ -14,6 +14,7 @@ Verified on October 22, 2026 using Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.
 | Backup restoration | A backup of the running database served the same room, identity, and frozen result in a new process. |
 | Deployment startup command | Applied migrations to a fresh local database, passed readiness, and accepted room creation using the configured origin. |
 | Render Blueprint | Validated against Render's official JSON Schema. No deployment performed. |
+| LAN access configuration | Reproduced the localhost/LAN origin mismatch, set the browser-facing origin, and verified room creation, joining, and voting through the LAN address. Unrelated origins still receive 403. |
 
 The full-duration browser test used two isolated browser sessions, retained the original ten-minute deadline, and confirmed that the saved closing time equals that deadline. It did not alter the database deadline or mock the clock. Routine browser cases accelerate only their own room in an isolated test SQLite file; the application has no deadline-changing endpoint.
 

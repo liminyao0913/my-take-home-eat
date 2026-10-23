@@ -85,3 +85,11 @@ The Render Blueprint validates against its official schema. Its startup command 
 The user chose local delivery when asked about the deployment repository. Public deployment is deferred and is no longer a completion requirement for this implementation. Future deployment configuration and recovery instructions remain in `render.yaml` and `docs/deployment.md`. No remote, paid resources, or public deployment have been created.
 
 Local delivery is complete. The production server was started at `http://localhost:3000` using `npm run start:host`, with the database at `.data/lets-eat.sqlite`. Detailed commands and evidence are in [docs/verification.md](docs/verification.md). Every repository commit uses the user's configured author and committer identity, Limin Yao <isabel0913@gmail.com>.
+
+## Local network access
+
+Opening the app from another computer exposed a configuration mismatch: without `.env.local`, the allowed origin defaulted to `http://localhost:3000`, while the browser used the host computer's LAN address. The create-room form consequently returned `403 WRONG_ORIGIN`.
+
+Set the local `APP_ORIGIN` to the user's browser-facing LAN URL and restarted the production server. Keep that machine-specific setting in the ignored `.env.local`; use the same URL in all browsers. The origin check and application code are unchanged. README and `.env.example` now explain the network configuration and restart requirement.
+
+Verified the original form failure, then successful creation, joining from a separate browser, and vote propagation at the LAN address. An unrelated origin still receives 403. Removed only the temporary test room after verification; existing rooms were preserved.

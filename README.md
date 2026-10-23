@@ -25,6 +25,12 @@ npm run start
 
 The health endpoint is /api/health. Apply migrations before starting the app.
 
+### Open it from another computer
+
+Set `APP_ORIGIN` in `.env.local` to the address people will open, including its port, for example `http://192.168.1.10:3000`. Restart the app after changing it. Use that same address in every browser, including on the computer running the app.
+
+For a production build, `npm run start:host` binds to all network interfaces. Share the LAN URL with people on the same network. If the browser address differs from `APP_ORIGIN`, writes are rejected with “Open this room on its original site before making changes.”
+
 ## Use it
 
 Create a room with a meal date, area, and one or more place-and-time options. Share its URL with friends; they only need a display name. Everyone can add options, approve several meals, mark an option they cannot do, and save private cuisine, price, or time preferences.
