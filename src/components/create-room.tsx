@@ -21,6 +21,8 @@ export function CreateRoom() {
   const selected = chosenPreferences ?? profile?.preferences ?? blankPreferences;
   const enabled = useSaved ?? hasSavedPreferences(selected);
   const [reuseStatus, setReuseStatus] = useState("");
+  const [reuseError, setReuseError] = useState(false);
+  const [reuseAttempt, setReuseAttempt] = useState(0);
   const [defaults, setDefaults] = useState<{ date: string; zone: string } | null>(null);
   const [options, setOptions] = useState<OptionInput[]>([emptyOption()]);
   const [addTogether, setAddTogether] = useState(false);
@@ -45,20 +47,28 @@ export function CreateRoom() {
       if (controller.signal.aborted) return;
       setOptions((old) => {
         const value = { ...emptyOption(), ...place, cuisine: place.cuisine as OptionInput["cuisine"], link: place.link ?? "", startTime: old[0].startTime };
-        return old.length === 1 && !old[0].placeName ? [value] : [...old, value];
+        const blank = old.length === 1 && !old[0].placeName && !old[0].location && !old[0].cuisine && old[0].priceLevel === null && !old[0].link;
+        return blank ? [value] : [...old, value];
       });
+      setReuseError(false);
       setReuseStatus("Past idea loaded. Review its details and choose a new meal time.");
       // Reusing an idea is a one-time draft action, not something to repeat on refresh.
       window.history.replaceState(window.history.state, "", window.location.pathname);
-    }).catch((error) => { if (!controller.signal.aborted) setReuseStatus(`${errorDetails(error).message} You can still add an idea manually.`); });
+    }).catch((error) => {
+      if (!controller.signal.aborted) {
+        setReuseError(true);
+        setReuseStatus(`${errorDetails(error).message} You can still add an idea manually.`);
+      }
+    });
     return () => controller.abort();
-  }, [defaults]);
+  }, [defaults, reuseAttempt]);
 
   function addPastPlace(place: PastPlace) {
     setAddTogether(false);
     setOptions((old) => {
       const value = { ...emptyOption(), ...place, cuisine: place.cuisine as OptionInput["cuisine"], link: place.link ?? "", startTime: old[0].startTime };
-      return old.length === 1 && !old[0].placeName ? [value] : [...old, value];
+      const blank = old.length === 1 && !old[0].placeName && !old[0].location && !old[0].cuisine && old[0].priceLevel === null && !old[0].link;
+      return blank ? [value] : [...old, value];
     });
   }
 
@@ -88,7 +98,7 @@ export function CreateRoom() {
       </div>
       <p className="hint">Times in {defaults.zone.replaceAll("_", " ")}</p>
       {profile && <><div className="area-choice"><Field label="Area" name="area" placeholder="Optional · narrow your past ideas" maxLength={120} value={area} onChange={(event) => setArea(event.target.value)} error={error?.fieldErrors?.area} /></div><SavedPreferenceChoice value={selected} enabled={enabled} onToggle={setUseSaved} onChange={setChosenPreferences} /><Suggestions preferences={enabled ? selected : blankPreferences} area={area} options={options} busy={busy} onAdd={addPastPlace} /></>}
-      {reuseStatus && <p className="reuse-status" role="status">{reuseStatus}</p>}
+      {reuseStatus && <p className="reuse-status" role="status">{reuseStatus}{reuseError && <> <button type="button" className="text-button" onClick={() => { setReuseError(false); setReuseStatus("Loading your past idea…"); setReuseAttempt((old) => old + 1); }}>Retry past idea</button></>}</p>}
       <div className="divider" />
       <label className="together-choice"><input type="checkbox" checked={addTogether} onChange={(e) => setAddTogether(e.target.checked)} /> Create the room first; add ideas together</label>
       {!addTogether && options.map((option, index) => <fieldset key={index} className="initial-option"><legend>Meal option {index + 1}</legend>
