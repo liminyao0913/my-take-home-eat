@@ -71,13 +71,21 @@ The checks for invalid dates and time ranges behaved as expected, and the basic 
 
 **Suggested improvement:** After joining, prioritize the meal options. Collapse the participant list into a compact status row and keep preferences accessible through a small optional control. Show who has responded, rather than only who has joined.
 
-## 6. Medium priority: Make the deployment and demo easier to evaluate
+## 6. Medium priority: Make the result flow quick to evaluate
 
-**Observed:** The reviewed deployment is served over HTTP at a raw IP address and port. A complete timed walkthrough also requires waiting through the fixed ten-minute round.
+**Observed:** A complete timed walkthrough requires waiting through the fixed ten-minute round, making it slow to explore the final result and its explanation.
 
-**Why it matters:** A reviewer should be able to reach a stable entry point and experience the result flow quickly.
+**Why it matters:** A reviewer should be able to experience voting, see which meal wins, and understand why within a short walkthrough.
 
-**Suggested improvement:** Use a stable HTTPS URL for the submission, and provide a clearly labeled sample or demo flow that reaches a result quickly without changing the normal production rules.
+**Suggested improvement:**
+
+- Add a clearly labeled **Try a demo** entry point with sample meal options and participant inputs already filled in.
+- Let the reviewer try a vote and click **Show result** immediately to see the winning meal and decision explanation. Include a sample all-excluded outcome to demonstrate the no-winner flow too.
+- Keep sample data and demo actions separate from real rooms. Normal rooms retain their ten-minute deadline and existing decision rules.
+
+**Acceptance:** From the home page, a reviewer can reach and understand a sample result in under one minute, without entering restaurant details or waiting for a real deadline. The interface clearly identifies the experience as a demo.
+
+**Scope clarification:** The user has no DNS configured and accepts the current HTTP address and port. Raw-IP hosting is not an improvement request for this item; a domain or HTTPS deployment change is not required to deliver the faster demo.
 
 ## Decisions to explain in APPROACH.md
 

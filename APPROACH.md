@@ -122,3 +122,7 @@ Recommendations for discussion:
 - Prioritize duplicate-place warnings and directions; consider recent rooms, calendar export, and QR invites afterward.
 
 The new plan includes failure behavior, rollout order, acceptance checks, and official references for the external-service constraints. These are product recommendations to resolve in the next technical spec, with no application or deployment changes in this planning step.
+
+## UX review scope clarification
+
+The user narrowed item 6 of [the UX review](docs/feedback/REVIEW.md) to experiencing the result flow quickly. The current HTTP address and port are accepted because DNS is not configured; changing the deployment URL is outside this item. The recommendation is a clearly labeled demo with sample inputs and an immediate result action, reachable from the home page in under one minute. Demo actions remain separate from real rooms and their ten-minute deadline. This records the requested improvement; the demo is not yet implemented.
