@@ -2,6 +2,34 @@
 
 Verified on October 22, 2026 using Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.4, and Playwright Chromium. The existing computer now serves the app through its public address on port 3000; managed hosting remains deferred.
 
+## UX review improvements
+
+The six review improvements are implemented and running at the existing public address. See the [review follow-up](feedback/REVIEW.md#implementation-follow-up) for the feature-to-test mapping.
+
+| Check | Outcome |
+| --- | --- |
+| TypeScript, ESLint, production build | Passed with the new routes and UI. |
+| Unit tests | 17 passed, including unknown restaurant fields and preference scoring. |
+| SQLite integration tests | 17 passed, including readiness, reasons, early finish, repeat rounds, stale-round rejection, persistence, and populated original-schema migration. |
+| Regular production-build browser suite | 17 passed in 1.4 minutes; the actual ten-minute case runs separately. |
+| Quick demo | Home → vote → result in under one minute without room API requests; vote, preference-only, and all-excluded outcomes verified. |
+| Early finish | Three browser sessions; a newly joined unready participant prevents finishing; explicit confirmation freezes the same result for everyone without changing the stored deadline. |
+| Recovery and repeat rounds | Constraint reasons synchronize; the alternative action focuses a single form; a new round retains link, identities, preferences, and history, clears responses/readiness, and rejects stale writes. A closed second browser detects the new round through polling. |
+| Mobile | At 375 pixels, join comes before options for guests; voting precedes supporting panels after joining; preferences remain accessible; no horizontal overflow. |
+| Restart and restore | Existing browser scenario passed again with the migrated schema and production build. |
+| Production migration | Consistent backup saved before migration. Checksums over all original columns matched for 4 rooms, 7 participants, 5 options, and 3 responses; integrity and foreign-key checks passed. |
+| Public URL smoke | Playwright on the app host exercised the public HTTP URL in two independent sessions: demo, creation, invite copy, join, constraints, alternatives, early result, same-link new round, private preference retention, reload persistence, stale writes, and origin protection. Desktop/phone screenshots inspected. |
+| Smoke cleanup | Removed only the temporary test room; all original-data checksums still matched. No production deadline was edited. |
+
+Current local evidence (ignored by Git):
+
+- Regular browser report: `.data/ux-review-regular-report/index.html`.
+- Public smoke assertions and outcome: `.data/ux-review-public-smoke.mjs` and `.data/ux-review-public-smoke.json`.
+- Screenshots: `.data/ux-review-home.png`, `.data/ux-review-demo-result.png`, `.data/ux-review-public-mobile.png`.
+- Pre-migration backup: `.data/pre-ux-review.sqlite`; original-column checksums: `.data/pre-ux-review-checks.json`.
+
+## Original release and earlier fixes
+
 | Check | Outcome |
 | --- | --- |
 | TypeScript and ESLint | Passed. |
@@ -25,7 +53,7 @@ Browser journeys cover concurrent votes from separate people, preference-only de
 Local evidence:
 
 - Full-duration release report: `.data/release-report/index.html` (preserved from the actual release run).
-- Latest copy regression report (three targeted browser cases): `playwright-report/index.html`.
+- Copy regressions now run as part of the regular browser suite listed above.
 - Browser screenshots and failure traces: `test-results/`.
 
 Use `npx playwright show-report .data/release-report` or `npx playwright show-report` to view the reports. These generated artifacts and all database files are ignored by Git. Test sources and the CI workflow are committed.

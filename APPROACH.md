@@ -2,6 +2,8 @@
 
 This is the running decision record for Let's Eat. Keep it updated as product and technical choices are made. Detailed product behavior lives in [docs/plan.md](docs/plan.md).
 
+The current changes and rationale are in [UX review implementation](#ux-review-implementation). Earlier sections retain the original decisions and verification history.
+
 The proposed next release is described in [docs/next-features-plan.md](docs/next-features-plan.md). Its recommendations extend the existing baseline; they are not implemented behavior.
 
 ## Confirmed direction
@@ -16,7 +18,7 @@ The proposed next release is described in [docs/next-features-plan.md](docs/next
 - Deliver a working product and verify it with end-to-end tests.
 - Run on the existing computer with SQLite; use the public address on port 3000 as subsequently requested. Managed hosting remains deferred.
 
-## Product baseline after the simplicity pass
+## Original product baseline after the simplicity pass
 
 These defaults resolve the brainstorming questions in favor of simplicity. They are working choices for the technical spec, not claims that every detail was separately approved.
 
@@ -57,7 +59,7 @@ The implementation details and verification gates are in [docs/tech-spec.md](doc
 | One Node.js 24 app with a local persistent database file. | Fits SQLite's storage model; run one service instance and keep transactions short. |
 | Use the existing computer with public access on port 3000; retain Render with a persistent disk as a future deployment option. | The user initially chose local delivery, then supplied the public address for that computer. The prepared Render configuration remains available for future managed hosting. |
 | A random HttpOnly guest cookie, with only its hash stored per room participant. | Supports identity and ownership without accounts; the shared link is distinct from the participant credential. |
-| Poll the room every three seconds while visible and open. | Sufficient for small groups; avoids maintaining live connections. |
+| Poll the room every three seconds while visible, including after closure. | Sufficient for small groups; closed-room polling lets people see a new round start on the same link. |
 | Enforce the persisted deadline on the server; save the result on the first request after expiry. | No worker or browser timer is required. Closure is effective at the deadline even when snapshot materialization happens later. |
 | Immediate SQLite transactions for mutations and finalization. | Serializes competing changes and makes the deadline check and result write atomic. |
 | Represent preference fractions in exact integer sixths. | Preserves the simple average while making ties independent of floating-point rounding. |
@@ -146,3 +148,5 @@ UI milestone: all six review improvements are implemented. The demo shares meal 
 All 17 regular browser scenarios passed against the production build, including the five new review journeys and the existing restart/backup, private preferences, constraints, origin/ownership, mobile, network-retry, and clipboard checks. The new recovery test exposed duplicate React keys on sibling forms; distinct keys fixed the duplicated forms and the regression now asserts only one add-idea form remains. Type checking, lint, and production build pass. The unaccelerated deadline check and public smoke test are in progress.
 
 Before applying migration 0001 to the running host, saved a consistent SQLite backup. Compared checksums over every original column before/after migration: all 4 rooms, 7 participants, 5 options, and 3 responses were preserved exactly, and SQLite integrity/foreign-key checks passed. Restarted the updated production app at the same public address and port.
+
+Public verification passed from the app host through `http://24.130.34.221:3000`: the isolated demo, minimal setup, HTTP invite copy, two-session joining/constraints, an alternative proposal, early finish, same-link new round with preserved preferences/history, stale-round and unrelated-origin rejection, and mobile reload persistence. Inspected desktop/home/result and phone screenshots. Removed only the smoke test's temporary room and rechecked the original data checksums successfully.
