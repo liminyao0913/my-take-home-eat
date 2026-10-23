@@ -1,8 +1,8 @@
 # Whole-system review
 
-Reviewed October 23, 2026, against commit `0353851`. Scope: application code, SQLite access, browser behavior, dependencies, deployment configuration, tests, and documentation. This is a review; the findings below have not been fixed.
+Reviewed October 23, 2026, against commit `0353851`. Scope: application code, SQLite access, browser behavior, dependencies, deployment configuration, tests, and documentation. The findings below describe the unfixed baseline at review time.
 
-Follow-up: the user subsequently selected Render hosting. The [remediation spec](../../self-reflect-remediation-tech-spec.md) maps F1–F8 to implementation and acceptance checks, and [hosted verification](../../verification.md#render-baseline-and-self-review-remediation) records the new baseline. The LAN observations and priorities below describe the reviewed deployment, not proof that the hosted service is ready.
+Follow-up: the user subsequently selected Render hosting. The [remediation spec](../../self-reflect-remediation-tech-spec.md) maps F1–F8 to implementation and acceptance checks, and [hosted verification](../../verification.md#render-baseline-and-self-review-remediation) records delivery. Render HTTPS and Secure cookies now address F7's transport prerequisite; the remaining application fixes are still proposed. The LAN observations and capacity measurements below remain historical evidence for the reviewed deployment.
 
 The service can support several groups on the current machine. Bounded tests with 20 and 100 groups of eight completed without request errors. **Keep SQLite for the current LAN-first product.** The immediate problems are missing resource limits, an in-flight credential-revocation race, and work that grows without bounds as history accumulates. The present implementation should not be treated as ready for unrestricted public traffic.
 

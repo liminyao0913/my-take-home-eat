@@ -38,7 +38,7 @@
       "originIsolation": "unrelated Origin rejected",
       "historyAndSuggestions": "passed",
       "realDeadline": {
-        "status": "running",
+        "status": "passed; see hostedVersionAndRedeployCheck",
         "durationMs": 600000,
         "deadlineAt": "2026-10-23T18:45:19.676Z",
         "noVotes": true
@@ -75,6 +75,35 @@
     "browserDuration": "1.9m",
     "blueprintValidation": "valid"
   },
-  "hostedVersionAndRedeployCheck": "pending",
-  "capacityLoadTest": "not run on live service"
+  "hostedVersionAndRedeployCheck": {
+    "startedAt": "2026-10-23T18:45:50.633Z",
+    "origin": "https://lets-eat-ba8e.onrender.com",
+    "expectedCommit": "e84208ba2a714cc08536ab3ef856144b003a8e34",
+    "checks": {
+      "version": {
+        "version": "0.1.0",
+        "commit": "e84208ba2a714cc08536ab3ef856144b003a8e34"
+      },
+      "redeployPersistence": "same participant identities, saved defaults, options and frozen early result",
+      "mobileVersionAndResult": "visible without horizontal overflow",
+      "realDeadline": {
+        "durationMs": 600000,
+        "closedAt": "2026-10-23T18:45:19.676Z",
+        "observedAt": "2026-10-23T18:46:02.121Z",
+        "winner": "Deadline Thai",
+        "basis": "preferences",
+        "approvals": 0,
+        "sameResultInTwoContexts": true,
+        "deadlineUnmodified": true,
+        "closedEarly": false,
+        "allPagesClosedBeforeDeadline": true,
+        "identityRetainedAcrossDeployment": true
+      }
+    },
+    "completedAt": "2026-10-23T18:46:02.225Z"
+  },
+  "capacityLoadTest": "not run on live service",
+  "sharedSmokeRoomsRetained": 2,
+  "recurringOffHostBackups": "not configured; manual off-host backup verified",
+  "applicationRemediationStatus": "F1-F6 and F8 remain planned; Render HTTPS and Secure cookies meet the F7 transport prerequisite."
 }

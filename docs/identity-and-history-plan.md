@@ -1,6 +1,6 @@
 # Remembered users, preferences, and meal history
 
-Status: implemented and verified on the LAN host, October 23, 2026. Render is now the selected public host, with hosted verification still in progress. See the [implementation spec](identity-and-history-tech-spec.md) and [verification record](verification.md) for delivery details.
+Status: implemented and verified on the LAN host, October 23, 2026. Render is now the selected public host; the hosted core flow, real deadline, and redeploy persistence also passed. See the [implementation spec](identity-and-history-tech-spec.md) and [verification record](verification.md) for delivery details and remaining hardening work.
 
 This is a separate feature plan. It covers recognizing returning users, reusable preferences, a personal room history, and suggestions when creating a meal. The broader `next-features-plan.md` is outside this work.
 

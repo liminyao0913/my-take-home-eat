@@ -35,7 +35,7 @@ The user supplied SSH access and authorized Render CLI account access to complet
 
 The existing service now has the documented build/start commands, exact HTTPS origin, `/var/data/lets-eat.sqlite`, a new 1 GB disk at `/var/data`, `/api/health`, and automatic deploys off. Compute size and instance count were retained. Deployment of `9834f5e` succeeded at 18:34 UTC; runtime logs confirmed migrations before startup. Subsequent SSH checks found all three migrations, the mounted disk, valid integrity, and no foreign-key errors. The updated Blueprint passed Render CLI validation.
 
-A real Playwright smoke at 18:35 UTC passed creation, full HTTPS clipboard invite, joining from a separate phone context, participant-added options, private/default preferences, concurrent approvals, early finish with identical results, mobile reload continuity, My meals, returning suggestions, and unrelated-Origin rejection. The issued cookie is Secure, HttpOnly, and SameSite=Lax. There were no uncaught browser errors. Two clearly labeled test rooms were created; the second is the real ten-minute preference-only case, initially scheduled to close at 18:45:19 UTC.
+A real Playwright smoke at 18:35 UTC passed creation, full HTTPS clipboard invite, joining from a separate phone context, participant-added options, private/default preferences, concurrent approvals, early finish with identical results, mobile reload continuity, My meals, returning suggestions, and unrelated-Origin rejection. The issued cookie is Secure, HttpOnly, and SameSite=Lax. There were no uncaught browser errors. Two clearly labeled test rooms were created; the second exercised the real ten-minute preference-only case described below. Those shared test rooms remain; no public room-deletion endpoint was added.
 
 Evidence: [render-deployment-20261023.json](feedback/self-reflect/evidence/render-deployment-20261023.json). Private room identifiers, browser storage, screenshots, and scripts stay in `.data/render-live-smoke-20261023/`. A consistent pre-version backup was copied off-host and passed integrity/foreign-key checks; it includes all rows, including a separate user-created room. No real meal data was removed or rewritten, and the LAN database was not copied to Render.
 
@@ -45,7 +45,16 @@ The requested version feature adds a header link and `/api/version`, returning t
 
 Fresh typecheck/lint, 24 unit tests, 27 integration tests, a production build, and all 23 regular browser cases passed with the version change. The regular suite took 1.9 minutes and skipped only its separate ten-minute local case. Build/browser checks used an isolated source copy, leaving the running LAN build intact. Additional checks passed for a 375-pixel version label without overflow, correct JSON/no-store headers, a null local commit fallback, and version availability while health returned 503 against an unmigrated test database.
 
-Hosted version, real-deadline, and post-deployment persistence checks are in progress; they are not implied by the local passes above.
+The version feature was pushed on `fix/self-reflect-render` and deployed explicitly at **`e84208ba2a714cc08536ab3ef856144b003a8e34`**. Render confirmed it live at 18:45 UTC. The linked branch remains `master`, with automatic deploys off; deploying that explicit commit does not merge the feature branch.
+
+Hosted checks after deployment passed:
+
+- `/api/version` returned `0.1.0` and the exact deployed commit with `Cache-Control: no-store`; `/api/health` returned 200/ok.
+- The header showed the version and matching commit tooltip; the 375-pixel room/result page had no horizontal overflow. The screenshot was visually inspected.
+- Both saved browser contexts retained their participant IDs, saved defaults, options, private preferences, and the exact frozen early result across the actual Render redeploy.
+- The second room retained its original **600,000 ms** duration and deadline. With all room pages closed before expiry and no votes, both contexts later saw `Deadline Thai`, selected on preferences. `closedAt` was exactly **18:45:19.676 UTC**, `closedEarly` was false, and history/reload retained that result. No clock or database deadline was modified.
+
+The final public-URL check completed at **18:46:02 UTC**. Sanitized results are in the deployment evidence JSON; private context state, the post-deploy script, local version probe, and screenshots remain in `.data/render-live-smoke-20261023/`. The full local browser report was preserved there from the isolated build. A recurring off-host backup schedule and capacity/load measurement on the Render allocation remain pending; the verified backup was a manual pre-deployment copy. This operational release does not claim that the remaining self-review application findings are fixed.
 
 ## Browser identity and personal history
 

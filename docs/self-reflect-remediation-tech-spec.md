@@ -30,7 +30,7 @@ Initial deployment failures, subsequently corrected through the Render API:
 - A real browser create request returned 403 `WRONG_ORIGIN`: the running origin configuration did not match the HTTPS address.
 - A subsequent owner-supplied deploy log places `npm run start:host` in the **Build Command** field. It runs migrations and starts Next without building `.next`, so deployment fails. Put build and start commands in their separate fields above. Migrations during build do not prepare a runtime-mounted database.
 
-The current readiness failure is distinct from review F5: health correctly failed here, whereas F5 reproduces a partially migrated database that incorrectly passes. Fix both deployment configuration and F5's incomplete check.
+The initial readiness failure was distinct from review F5: health correctly failed here, whereas F5 reproduces a partially migrated database that incorrectly passes. Deployment configuration is now corrected; F5's incomplete schema check still needs implementation.
 
 Use startup logs to verify `Database migrations applied.` before Next starts. First require health 200 and an anonymous profile GET 200; then exercise create/join. An existing database must be backed up before migration. Do not delete a database, run ad hoc schema SQL, or weaken Origin checks to hide these errors. [Deployment/recovery procedure](deployment.md).
 
@@ -139,7 +139,7 @@ Expose `/api/version` with the package version and full deployed Git commit, ind
 
 | Stage | Work | Completion evidence |
 | --- | --- | --- |
-| 0 | Correct the existing Render build/start/origin/disk settings | Runtime migrations, health/profile 200, create/join successful; allocation recorded. |
+| 0 — delivered | Correct the existing Render build/start/origin/disk settings | Runtime migrations, health/profile 200, hosted create/join, secure cookies, actual redeploy persistence, and allocation verified in the delivery record. |
 | 1 | F1 input/admission limits and F2 authorization | Isolated abuse, race, expiry, and ownership regressions pass. |
 | 2 | F3 bounded reads/maintenance and F5 readiness | Lock probe, incomplete-schema tests, startup/restart and backup restore pass. |
 | 3 | F4 summaries/pagination and F6 refresh | Large-history bounds, deterministic recommendations, multi-tab freshness, preserved drafts. |

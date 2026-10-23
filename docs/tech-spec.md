@@ -4,7 +4,7 @@ Status: implementation specification. Current progress and verification results 
 
 Identity/history extension: [the separate implementation spec](identity-and-history-tech-spec.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and creator suggestions. Its credential lifecycle and private APIs supersede the original guest-only behavior below; group voting rules remain the same.
 
-Delivery update, October 23: local release tests are recorded in [verification](verification.md). The user now selected **Render** at `https://lets-eat-ba8e.onrender.com`. The [remediation spec](self-reflect-remediation-tech-spec.md) defines the next fixes and hosted acceptance gates, and the [deployment guide](deployment.md) gives the exact settings. The initial hosted check found configuration failures; a reachable homepage is not a verified release.
+Delivery update, October 23: the user selected **Render** at `https://lets-eat-ba8e.onrender.com`. Configuration was repaired, and hosted core flows, a real ten-minute deadline, version reporting, and redeploy persistence passed; see [verification](verification.md). The [remediation spec](self-reflect-remediation-tech-spec.md) defines the remaining fixes and resource gates, and the [deployment guide](deployment.md) gives the exact settings.
 
 ## 1. What we need and what we choose
 
@@ -162,6 +162,7 @@ All endpoints use JSON. Successful room mutations return the updated snapshot, i
 | POST /api/rooms/:roomId/finish | Require at least one option and all active participants ready; finalize immediately. |
 | POST /api/rooms/:roomId/rounds | After closure/expiry, supply a meal date and at least one new option. Archive the old result, clear options/responses/readiness, retain people/preferences, increment round, and start a fresh deadline atomically. |
 | GET /api/health | Currently checks access to the `rooms` table. Complete migration/schema readiness is required by remediation F5 but not yet implemented; expose no private data. |
+| GET /api/version | Uncached package version and full deployed Git commit, or null when unavailable. Independent of database readiness; the shared header links here. |
 
 The room snapshot contains room metadata, serverNow, state, active participant names and responded/ready flags, option details and aggregate vote/reason counts, result, previousRounds, and an optional me object. Only me contains private preferences and the caller’s own choices and reason tags. A participant counts as responded when they have a response, saved preferences, or readiness; the flag does not imply approval. Set Cache-Control: private, no-store on room responses and disable fetch caching.
 
