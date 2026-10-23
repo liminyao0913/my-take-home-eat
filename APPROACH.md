@@ -2,6 +2,8 @@
 
 **Public app: [https://lets-eat-ba8e.onrender.com/](https://lets-eat-ba8e.onrender.com/)**
 
+**Video: [Watch the project video](https://drive.google.com/file/d/1xo7ro_kCBWKp7WUkGobsNhQJT-1KsiYM/view?usp=sharing)**
+
 [Try the instant demo](https://lets-eat-ba8e.onrender.com/demo) · [Localhost and Render setup](README.md) · [Detailed decision log](detail_decisions.md)
 
 ## What I built and why

@@ -2,6 +2,8 @@
 
 **Public app: [https://lets-eat-ba8e.onrender.com/](https://lets-eat-ba8e.onrender.com/)**
 
+**Video: [Watch the project video](https://drive.google.com/file/d/1xo7ro_kCBWKp7WUkGobsNhQJT-1KsiYM/view?usp=sharing)**
+
 [Try the instant demo](https://lets-eat-ba8e.onrender.com/demo) · [Run on localhost](#run-locally) · [Deploy on Render](#deploy-on-render)
 
 A shared meal decision room for a small group. Read [what was built and why](APPROACH.md), the [detailed decision log](detail_decisions.md), [product plan](docs/plan.md), and [technical spec](docs/tech-spec.md).
