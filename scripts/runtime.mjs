@@ -23,7 +23,7 @@ export function checkDatabase(sqlite, write = false) {
   const applied = new Set(sqlite.prepare("SELECT created_at FROM __drizzle_migrations").all().map((row) => row.created_at));
   if (journal.entries.some((entry) => !applied.has(entry.when))) throw new Error("Required database migrations are missing.");
   // Preparing the union checks every required table/column; execution reads at most one row.
-  sqlite.prepare(`SELECT id || round || deadline_at || result_json FROM rooms
+  sqlite.prepare(`SELECT id || round || deadline_at || result_json || expected_participants || organizer_participant_id FROM rooms
     UNION ALL SELECT id || display_name || cuisines_json || max_price_level FROM profiles
     UNION ALL SELECT token_hash || profile_id || expires_at || legacy_available FROM browser_credentials
     UNION ALL SELECT profile_id || room_id || participant_id || role || hidden FROM profile_rooms

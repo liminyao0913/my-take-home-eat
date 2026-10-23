@@ -16,7 +16,7 @@ Assume a small trusted group, one meal date, and one general area. The existing 
 
 | Question | V1 decision | Why |
 | --- | --- | --- |
-| Automatic or organizer-confirmed result? | Close automatically ten minutes after creation, or explicitly finish once all joined people are ready. | Bounds the wait while allowing quick agreement; no special organizer role is needed. |
+| Automatic or organizer-confirmed result? | Close automatically ten minutes after creation, or explicitly finish once all joined people are ready. An optional expected headcount requires organizer confirmation if people are missing. | Bounds the wait while distinguishing joined participants from expected invitees. |
 | Choose the place and time separately? | Each option is one place at one start time. | Every vote describes a complete meal. |
 | Must an option work for everyone? | Exclude any option explicitly marked “Can't do this” by a participant. If none remain, close without a winner. | Respect stated constraints without building an automatic constraint-matching system. |
 | Show votes while people respond? | Show approval counts immediately. | The group can see where agreement is forming. |
@@ -28,7 +28,7 @@ For exact ties, choose the earliest-added eligible option among those tied. This
 
 ### Create
 
-1. Enter a display name and meal date. Defaults suggest a meal an hour ahead in the browser’s time zone. Title, area, and a zone override are optional details.
+1. Enter a display name and meal date. Defaults suggest a meal an hour ahead in the browser’s time zone. Title, area, a zone override, and expected people (1–32, including the organizer) are optional details.
 2. Add a place and start time, or choose to create the room first and add ideas together. Restaurant details are optional.
 3. Create the room. Its ten-minute countdown starts now.
 4. Copy the single room link into the group chat.
@@ -41,7 +41,9 @@ All option start times must be after the deadline, on the selected meal date. Sh
 2. Enter a display name when first contributing.
 3. Vote for any acceptable options, add an option, and optionally fill in preferences.
 4. Mark a specific option “Can't do this” if it genuinely cannot work; optionally share a constraint tag.
-5. Mark “I’m done” when ready. Once every joined participant is ready, anyone in the room can confirm an early finish.
+5. Mark “I’m done” when ready. Once every joined participant is ready, anyone in the room can confirm an early finish if everyone expected has joined or no headcount was set. If people are missing, only the organizer can explicitly choose “Finish without missing people.”
+
+The room shows “2 joined of 4 expected” when a headcount is provided. It is an expectation, not a reserved seat list or a join limit. A missing invitee or unavailable organizer never extends the ten-minute deadline. Headcount and organizer identity stay with the room across new rounds; they are not editable in this first version. Clearing or forgetting the organizer's browser identity loses override access. Existing rooms without a headcount retain the original early-finish flow. The result and copied summary record the expected count and any organizer override.
 
 People can do any combination of these actions. There is no required questionnaire. Readiness is optional when waiting for the deadline. Skipping preferences or votes leaves those inputs empty; silence is not agreement.
 
@@ -92,7 +94,7 @@ An excluded card shows “1 person can't do this” rather than looking like a v
 - Each room identity contributes at most one approval per option. Names are not verified, and another browser can create another identity.
 - Anyone with the link can join. This is intended for trusted groups.
 - A participant can leave before closing, removing their preferences, votes, and flags from the decision. Their proposals remain available to the group.
-- There are no special organizer controls after creation or cross-device recovery in v1.
+- Only the organizer can override missing invitees when a headcount was provided. There is no cross-device identity recovery in v1.
 
 ### Meal options
 
@@ -156,7 +158,7 @@ Example: an option matching two of someone's three preferences scores 2/3 for th
 
 No votes and no preferences therefore selects the first eligible proposal, with the explanation “No votes or preferences to rank these options; first proposed option selected.” If votes exist only on excluded options, explain that those options could not win and apply the preference fallback to the remaining choices.
 
-At the deadline there is no quorum. Use the inputs received, without assuming that everyone invited joined or agreed. Early finish requires all currently joined people to be ready, at least one option, and an explicit confirmation showing the current participant count. Invited people who have not joined do not count. Readiness alone is not an approval vote.
+At the deadline there is no quorum. Use the inputs received, without assuming that everyone invited joined or agreed. Early finish requires all currently joined people to be ready, at least one option, and an explicit confirmation showing the current participant count. If an expected headcount was set and fewer people have joined, require the organizer's explicit missing-invitee confirmation as well. Readiness alone is not an approval vote.
 
 ## 7. Boundaries and acceptance checks
 

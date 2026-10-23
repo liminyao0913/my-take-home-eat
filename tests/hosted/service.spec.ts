@@ -3,6 +3,7 @@ import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { HistoryPage, ProfileSnapshot, RoomSnapshot, Suggestions } from "../../src/lib/contracts";
 import { verifyGroupFlow } from "../browser/group-flow";
+import { verifyInvitations } from "../browser/invitations-flow";
 
 const origin = new URL(process.env.HOSTED_BASE_URL!).origin;
 const headers = { Origin: origin };
@@ -111,23 +112,30 @@ test("P1 hosted: three independent browsers validate the defining group interact
   record("p1-validation.json", await verifyGroupFlow(browser, origin, (page, name) => page.screenshot({ path: path(name), fullPage: true })));
 });
 
+test("P1 hosted invitations: optional headcount and explicit organizer override", async ({ browser }) => {
+  test.skip(process.env.HOSTED_RESUME === "1" || process.env.HOSTED_DEADLINE_ONLY === "1");
+  record("p1-invitations.json", await verifyInvitations(browser, origin, (page, name) => page.screenshot({ path: path(name), fullPage: true })));
+});
+
 test("hosted release: an actual ten-minute deadline gives both browsers the same result", async ({ browser }) => {
   test.skip(process.env.RUN_HOSTED_DEADLINE !== "1" || process.env.HOSTED_RESUME === "1");
   test.setTimeout(12 * 60_000);
   const owner = await browser.newContext({ baseURL: origin, timezoneId: "UTC" });
   const guest = await browser.newContext({ baseURL: origin, timezoneId: "UTC" });
   try {
-    const created = await owner.request.post("/api/rooms", { headers, data: { displayName: "Deadline organizer", title: `Hosted deadline ${new Date().toISOString()}`, mealDate: tomorrow(), timeZone: "UTC", options: [{ placeName: "Deadline Thai", startTime: "12:30", cuisine: "Thai" }, { placeName: "Deadline Pasta", startTime: "13:00", cuisine: "Italian" }] } });
+    const created = await owner.request.post("/api/rooms", { headers, data: { displayName: "Deadline organizer", title: `Hosted deadline ${new Date().toISOString()}`, mealDate: tomorrow(), timeZone: "UTC", expectedParticipants: 4, options: [{ placeName: "Deadline Thai", startTime: "12:30", cuisine: "Thai" }, { placeName: "Deadline Pasta", startTime: "13:00", cuisine: "Italian" }] } });
     expect(created.status()).toBe(201); const { id } = await created.json();
     expect((await guest.request.post(`/api/rooms/${id}/participants`, { headers, data: { displayName: "Deadline friend" } })).status()).toBe(200);
     const initial = await room(owner.request, id); expect(initial.room.deadlineAt - initial.room.createdAt).toBe(600_000);
     for (const context of [owner, guest]) expect((await context.request.put(`/api/rooms/${id}/options/${initial.options[0].id}/response`, { headers, data: { choice: "approve" } })).status()).toBe(200);
     const page = await owner.newPage(); const other = await guest.newPage();
     await page.goto(`/r/${id}`); await other.goto(`/r/${id}`);
+    await expect(page.locator(".participation-bar")).toContainText("2 joined of 4 expected");
     await expect(page.getByTestId("result")).toBeVisible({ timeout: 630_000 });
     await expect(other.getByTestId("result")).toBeVisible();
     const result = (await room(owner.request, id)).result!;
     expect(result.closedAt).toBe(initial.room.deadlineAt); expect(result.closedEarly).toBe(false);
+    expect(result).toMatchObject({ participantCount: 2, expectedParticipantCount: 4, invitationOverride: false });
     expect(result.winner?.placeName).toBe("Deadline Thai"); expect(result.winner?.approvalCount).toBe(2);
     expect((await room(guest.request, id)).result).toEqual(result);
     expect(Date.now()).toBeGreaterThanOrEqual(initial.room.deadlineAt);

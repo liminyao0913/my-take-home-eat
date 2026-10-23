@@ -31,13 +31,15 @@ export function MealResult({ result, title, mealDate, timeZone, demo = false }: 
 }) {
   const winner = result.winner;
   const recommendation = winner?.approvalCount === 0;
-  const summary = () => `${title}: ${winner ? `${recommendation ? "Suggested meal: " : ""}${winner.placeName}${winner.location ? `, ${winner.location}` : ""} — ${formatDate(mealDate)} at ${formatTime(winner.startAt, timeZone)} (${timeZone}).` : "No meal could be selected."} ${result.message}\n${window.location.href}`;
+  const attendance = result.expectedParticipantCount === undefined ? "" : result.invitationOverride ? `Organizer finished with ${result.participantCount} of ${result.expectedParticipantCount} expected people.` : `${result.participantCount} of ${result.expectedParticipantCount} expected people joined.`;
+  const summary = () => `${title}: ${winner ? `${recommendation ? "Suggested meal: " : ""}${winner.placeName}${winner.location ? `, ${winner.location}` : ""} — ${formatDate(mealDate)} at ${formatTime(winner.startAt, timeZone)} (${timeZone}).` : "No meal could be selected."} ${result.message}${attendance ? ` ${attendance}` : ""}\n${window.location.href}`;
   return <section className={`result-panel ${winner ? "" : "no-winner"}`} aria-labelledby="result-title" data-testid="result">
     <span className="eyebrow">{winner ? recommendation ? "SUGGESTED MEAL" : "THE GROUP'S PICK" : "NO WINNER THIS ROUND"}</span>
     <h2 id="result-title">{winner ? winner.placeName : "Let’s try a few different ideas."}</h2>
     {winner && <MealDetails option={winner} timeZone={timeZone} />}
     <p className="result-reason">{result.message}</p>
-    <div className="result-stats"><span>{result.participantCount} people joined</span><span>{result.voterCount} approved</span><span>{result.preferenceCount} shared preferences</span>{result.groupMatchPercent !== null && <span>{Math.round(result.groupMatchPercent)}% preference match</span>}{result.closedEarly && <span>Finished early · everyone was ready</span>}</div>
+    <div className="result-stats"><span>{result.participantCount} people joined</span><span>{result.voterCount} approved</span><span>{result.preferenceCount} shared preferences</span>{result.groupMatchPercent !== null && <span>{Math.round(result.groupMatchPercent)}% preference match</span>}{result.closedEarly && <span>Finished early · everyone who joined was ready</span>}</div>
+    {attendance && <p className="result-note">{attendance}</p>}
     {recommendation && <p className="result-note">This is a recommendation: no eligible meal received an approval. Confirm with the group before heading out.</p>}
     {!demo && <div className="result-actions"><CopyButton label="Copy meal summary" getText={summary} /></div>}
     {winner && !recommendation && <p className="result-note">A lack of blocks doesn&apos;t mean everyone confirmed. Check in with anyone who hasn&apos;t responded.</p>}

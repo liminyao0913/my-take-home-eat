@@ -4,7 +4,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { and, asc, count, desc, eq, gt, isNull, lt } from "drizzle-orm";
 import { LIMITS } from "@/lib/limits";
 import {
-  BLOCK_REASONS, createRoomInput, joinInput, optionInput, roomPreferencesInput, readyInput, responseInput, roundInput, ROUND_MS,
+  BLOCK_REASONS, createRoomInput, finishInput, joinInput, optionInput, roomPreferencesInput, readyInput, responseInput, roundInput, ROUND_MS,
   type MealOption, type OptionInput, type Preferences, type RoomSnapshot, type RoundPage,
 } from "@/lib/contracts";
 import { decide } from "@/lib/decision";
@@ -99,14 +99,14 @@ function loadInputs(db: Query, room: Room) {
   return { people, meals, responded, approved, personal };
 }
 
-function finalize(db: Query, room: Room, now: number, early = false): Room {
+function finalize(db: Query, room: Room, now: number, early = false, invitationOverride = false): Room {
   if (room.result) return room;
   const { people, approved, meals } = loadInputs(db, room);
   const result = { ...decide({
     options: meals, preferences: people.map(preferencesOf), participantCount: people.length,
     voterCount: approved.size,
     deadlineAt: early ? now : room.deadlineAt, timeZone: room.timeZone,
-  }), closedEarly: early };
+  }), closedEarly: early, ...(room.expectedParticipants === null ? {} : { expectedParticipantCount: room.expectedParticipants, invitationOverride }) };
   db.update(rooms).set({ result, resolvedAt: now }).where(eq(rooms.id, room.id)).run();
   capturePersonalRound(db, room, result, now);
   return { ...room, result, resolvedAt: now };
@@ -116,10 +116,10 @@ function snapshot(db: Query, room: Room, tokenHash: string | null, now: number):
   const { people, responded, personal, meals } = loadInputs(db, room);
   const me = credentialFor(db, tokenHash, now) ? people.find((p) => p.tokenHash === tokenHash) : undefined;
   return {
-    room: { id: room.id, title: room.title, mealDate: room.mealDate, area: room.area, timeZone: room.timeZone, createdAt: room.createdAt, deadlineAt: room.deadlineAt, round: room.round },
+    room: { id: room.id, title: room.title, mealDate: room.mealDate, area: room.area, timeZone: room.timeZone, createdAt: room.createdAt, deadlineAt: room.deadlineAt, round: room.round, expectedParticipants: room.expectedParticipants },
     state: room.result ? "closed" : "open", serverNow: now,
     participants: people.map((p) => ({ id: p.id, displayName: p.displayName, ready: p.ready, responded: p.ready || responded.has(p.id) || p.cuisines.length > 0 || p.maxPriceLevel !== null || p.preferredStartMinute !== null })), options: meals, result: room.result,
-    me: me ? { id: me.id, displayName: me.displayName, ready: me.ready, preferences: preferencesOf(me), ...(personal.get(me.id) ?? { choices: {}, blockReasons: {} }) } : null,
+    me: me ? { id: me.id, displayName: me.displayName, ready: me.ready, isOrganizer: me.id === room.organizerParticipantId, preferences: preferencesOf(me), ...(personal.get(me.id) ?? { choices: {}, blockReasons: {} }) } : null,
     archiveCount: db.select({ count: count() }).from(roomRounds).where(eq(roomRounds.roomId, room.id)).get()!.count,
   };
 }
@@ -145,10 +145,11 @@ export class RoomService {
       validateDate(input.mealDate, input.timeZone, now);
       const id = randomBytes(18).toString("base64url");
       const personId = randomUUID();
-      const room = { id, title: input.title, area: input.area, mealDate: input.mealDate, timeZone: input.timeZone, createdAt: now, deadlineAt: now + ROUND_MS };
+      const room = { id, title: input.title, area: input.area, mealDate: input.mealDate, timeZone: input.timeZone, expectedParticipants: input.expectedParticipants, createdAt: now, deadlineAt: now + ROUND_MS };
       const meals = input.options.map((o, i) => ({ ...optionValues(o, room, `options.${i}.startTime`), roomId: id, authorId: personId, createdAt: now }));
       tx.insert(rooms).values(room).run();
       tx.insert(participants).values({ id: personId, roomId: id, tokenHash, displayName: input.displayName, createdAt: now, ...input.preferences }).run();
+      tx.update(rooms).set({ organizerParticipantId: personId }).where(eq(rooms.id, id)).run();
       if (meals.length) tx.insert(options).values(meals).run();
       const profile = ensureProfile(tx, tokenHash, input.displayName, now);
       linkProfileRoom(tx, profile.id, id, personId, "created");
@@ -290,13 +291,19 @@ export class RoomService {
     });
   }
 
-  finish(roomId: string, tokenHash: string | null) {
+  finish(roomId: string, tokenHash: string | null, value: unknown = {}) {
+    const input = parseInput(finishInput, value);
     this.mutate(roomId, tokenHash, (tx, room, now) => {
-      getParticipant(tx, roomId, tokenHash);
+      const person = getParticipant(tx, roomId, tokenHash);
       const { people, meals } = loadInputs(tx, room);
       if (!people.length || people.some((p) => !p.ready)) throw new ApiError(409, "NOT_READY", "Everyone who joined must mark ‘I'm done’ before finishing early.");
       if (!meals.length) throw new ApiError(409, "NO_OPTIONS", "Add a meal idea before finishing the round.");
-      finalize(tx, room, now, true);
+      const missing = room.expectedParticipants !== null && people.length < room.expectedParticipants;
+      if (missing) {
+        if (!input.overrideMissing) throw new ApiError(409, "MISSING_INVITEES", `${people.length} joined of ${room.expectedParticipants} expected. The organizer must confirm finishing without the missing people.`);
+        if (person.id !== room.organizerParticipantId) throw new ApiError(403, "ORGANIZER_REQUIRED", "Only the organizer can finish without missing invitees. The ten-minute deadline still applies.");
+      }
+      finalize(tx, room, now, true, missing);
     });
   }
 

@@ -79,7 +79,7 @@ export function CreateRoom() {
     setBusy(true); setError(null);
     try {
       const room = await request<{ path: string }>("/api/rooms", "POST", {
-        displayName: data.get("displayName"), title: String(data.get("title") || "").trim() || "Let's grab a bite", area, mealDate: data.get("mealDate"), timeZone: data.get("timeZone"), options: addTogether ? [] : options, preferences: profile && enabled ? selected : undefined,
+        displayName: data.get("displayName"), title: String(data.get("title") || "").trim() || "Let's grab a bite", area, mealDate: data.get("mealDate"), timeZone: data.get("timeZone"), expectedParticipants: data.get("expectedParticipants") ? Number(data.get("expectedParticipants")) : null, options: addTogether ? [] : options, preferences: profile && enabled ? selected : undefined,
       });
       router.push(room.path);
     } catch (error) { setError(errorDetails(error)); setBusy(false); }
@@ -106,8 +106,9 @@ export function CreateRoom() {
         {options.length > 1 && <button type="button" className="text-button remove-draft" onClick={() => setOptions((old) => old.filter((_, i) => i !== index))}>Remove option {index + 1}</button>}
       </fieldset>)}
       {!addTogether && <button type="button" className="add-draft" onClick={() => setOptions((old) => [...old, { ...emptyOption(), startTime: old[0].startTime }])}>+ Add another idea</button>}
-      <details className="optional-details" open={["title", "area", "timeZone"].some((field) => error?.fieldErrors?.[field]) ? true : undefined} onInvalidCapture={(event) => { event.currentTarget.open = true; }}><summary>Meal details (optional)</summary><div className="form-grid">
+      <details className="optional-details" open={["title", "area", "timeZone", "expectedParticipants"].some((field) => error?.fieldErrors?.[field]) ? true : undefined} onInvalidCapture={(event) => { event.currentTarget.open = true; }}><summary>Meal details (optional)</summary><div className="form-grid">
         <Field label="Meal title" name="title" defaultValue="Let's grab a bite" maxLength={100} error={error?.fieldErrors?.title} />
+        <Field label="Expected people (including you)" name="expectedParticipants" type="number" min={1} max={32} step={1} placeholder="Optional · e.g. 4" hint="Before finishing early, we'll check who has joined. You can confirm if someone can't make it." error={error?.fieldErrors?.expectedParticipants} />
         {!profile && <Field label="Area" name="area" placeholder="e.g. Downtown" maxLength={120} value={area} onChange={(event) => setArea(event.target.value)} error={error?.fieldErrors?.area} />}
         <Field label="Room time zone" name="timeZone" value={defaults.zone} onChange={(e) => setDefaults({ ...defaults, zone: e.target.value })} required maxLength={100} hint="Everyone sees meal times in this zone." error={error?.fieldErrors?.timeZone} />
       </div></details>

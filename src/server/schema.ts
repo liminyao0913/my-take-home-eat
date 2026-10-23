@@ -1,5 +1,5 @@
 import { desc, sql } from "drizzle-orm";
-import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { BlockReason, Choice, DecisionResult, MealSignal } from "../lib/contracts";
 
 export const rooms = sqliteTable("rooms", {
@@ -11,9 +11,14 @@ export const rooms = sqliteTable("rooms", {
   createdAt: integer("created_at").notNull(),
   deadlineAt: integer("deadline_at").notNull(),
   round: integer("round").notNull().default(1),
+  expectedParticipants: integer("expected_participants"),
+  organizerParticipantId: text("organizer_participant_id").references((): AnySQLiteColumn => participants.id, { onDelete: "set null" }),
   result: text("result_json", { mode: "json" }).$type<DecisionResult>(),
   resolvedAt: integer("resolved_at"),
-}, (table) => [index("room_open_deadline").on(desc(table.deadlineAt), table.id).where(sql`${table.result} IS NULL`)]);
+}, (table) => [
+  index("room_open_deadline").on(desc(table.deadlineAt), table.id).where(sql`${table.result} IS NULL`),
+  check("room_expected_participants", sql`${table.expectedParticipants} IS NULL OR ${table.expectedParticipants} BETWEEN 1 AND 32`),
+]);
 
 export const participants = sqliteTable("participants", {
   id: text("id").primaryKey(),

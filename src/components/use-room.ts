@@ -50,7 +50,7 @@ export function useRoom(roomId: string) {
     controller.current?.abort(); controller.current = null;
     try { accept(await request<RoomSnapshot>(`${base}${suffix}`, method, value, undefined, current.current?.room.round)); }
     catch (error) {
-      if (error instanceof RequestError && ["ROOM_CLOSED", "STALE_ROUND", "NOT_READY"].includes(error.details.code)) { pending.current = false; await refresh(); }
+      if (error instanceof RequestError && ["ROOM_CLOSED", "STALE_ROUND", "NOT_READY", "MISSING_INVITEES"].includes(error.details.code)) { pending.current = false; await refresh(); }
       throw error;
     } finally { pending.current = false; setBusy(false); }
   }, [accept, base, refresh]);

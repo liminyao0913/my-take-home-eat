@@ -67,15 +67,18 @@ function FinishVoting({ data, busy, mutate }: { data: RoomSnapshot; busy: boolea
   const [error, setError] = useState<ApiErrorBody | null>(null);
   const readyCount = data.participants.filter((person) => person.ready).length;
   const allReady = data.participants.length > 0 && readyCount === data.participants.length;
+  const missing = data.room.expectedParticipants !== null && data.participants.length < data.room.expectedParticipants;
+  const canFinish = !missing || data.me!.isOrganizer;
   async function change(suffix: string, value?: unknown) {
     setError(null);
-    try { await mutate(suffix, value ? "PUT" : "POST", value); setConfirm(false); }
+    try { await mutate(suffix, suffix === "/finish" ? "POST" : "PUT", value); setConfirm(false); }
     catch (error) { setError(errorDetails(error)); }
   }
   return <section className="panel finish-panel" aria-label="Finish voting">
     <div className="finish-status"><div><h3>{allReady ? "Everyone at the table is ready" : "Happy with your choices?"}</h3><p className="muted small">{readyCount} of {data.participants.length} people are ready to finish.</p></div><button className="button secondary" disabled={busy} aria-pressed={data.me!.ready} onClick={() => void change("/participants/me/ready", { ready: !data.me!.ready })}>{data.me!.ready ? "Keep deciding" : "I'm done"}</button></div>
     <p className="hint">Save any preference changes first. New ideas mean everyone reviews again.</p>
-    {allReady && data.options.length > 0 && (!confirm ? <button className="button primary finish-button" disabled={busy} onClick={() => setConfirm(true)}>Finish voting early</button> : <div className="finish-confirm" role="group" aria-label="Confirm early finish"><p>All {data.participants.length} joined people are ready. Only people who joined count; invited friends may still be missing.</p><p className="small">This will freeze the result now. {data.options.every((option) => option.blockCount > 0) && "All options are excluded, so this round will have no winner."}</p><div className="save-row"><button className="button primary" disabled={busy} onClick={() => void change("/finish")}>Confirm and show result</button><button className="text-button" disabled={busy} onClick={() => setConfirm(false)}>Keep the round open</button></div></div>)}
+    {missing && <p className="hint">{data.participants.length} joined of {data.room.expectedParticipants} expected. {data.me!.isOrganizer ? "You can confirm finishing without the missing people once everyone here is ready." : "The organizer must confirm to finish without the missing people."} The ten-minute deadline still applies.</p>}
+    {allReady && canFinish && data.options.length > 0 && (!confirm ? <button className="button primary finish-button" disabled={busy} onClick={() => setConfirm(true)}>Finish voting early</button> : <div className="finish-confirm" role="group" aria-label="Confirm early finish"><p>All {data.participants.length} joined people are ready. {missing ? `${data.participants.length} joined of ${data.room.expectedParticipants} expected. Finishing now leaves the missing people out of this decision.` : data.room.expectedParticipants === null ? "Only people who joined count; invited friends may still be missing." : "Everyone expected has joined."}</p><p className="small">This will freeze the result now. {data.options.every((option) => option.blockCount > 0) && "All options are excluded, so this round will have no winner."}</p><div className="save-row"><button className="button primary" disabled={busy} onClick={() => void change("/finish", { overrideMissing: missing })}>{missing ? "Finish without missing people" : "Confirm and show result"}</button><button className="text-button" disabled={busy} onClick={() => setConfirm(false)}>Keep the round open</button></div></div>)}
     <FormError error={error} />
   </section>;
 }
@@ -109,7 +112,7 @@ export function Room({ roomId }: { roomId: string }) {
     {!open && data.me && <NewRound key={data.room.round} data={data} busy={busy} mutate={mutate} />}
     {!open && !data.me && <p className="muted recovery-note">Someone who joined this meal can start another round here using the same link.</p>}
     {open && !data.me && <JoinForm busy={busy} mutate={mutate} />}
-    <div className="participation-bar"><span role="status">{responded} of {data.participants.length} people have responded</span>{open && data.me && <button className="text-button" onClick={() => reveal(preferences.current)}>My preferences (optional)</button>}</div>
+    <div className="participation-bar"><span role="status">{data.room.expectedParticipants !== null && <>{data.participants.length} joined of {data.room.expectedParticipants} expected · </>}{responded} of {data.participants.length} people have responded</span>{open && data.me && <button className="text-button" onClick={() => reveal(preferences.current)}>My preferences (optional)</button>}</div>
     {open && allExcluded && <section className="conflict-banner" role="status"><h2>No viable options right now</h2><p>Every idea has a “Can&apos;t do this” response. Try a different time or place using the reasons below.</p>{data.me ? <button className="button secondary" onClick={() => reveal(addOption.current)}>Add an alternative</button> : <a href="#join" className="text-button">Join to suggest an alternative ↑</a>}</section>}
     <div className="room-layout">
       <section className="options-section" aria-labelledby="options-title"><div className="options-heading"><h2 id="options-title">On the table <span>{data.options.length}</span></h2>{open && <span className="small muted">Vote for as many as you like</span>}</div>

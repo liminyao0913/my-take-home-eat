@@ -70,6 +70,47 @@ describe("real SQLite room service", () => {
     service.join(id, "lee", { displayName: "Lee" });
     expect(() => service.finish(id, "alex")).toThrowError(expect.objectContaining({ code: "NOT_READY" }));
   });
+  it("requires an explicit organizer override when expected invitees are missing", () => {
+    const { id } = service.create("alex", { ...input, expectedParticipants: 4 });
+    service.join(id, "sam", { displayName: "Sam" });
+    expect(service.get(id, "alex")).toMatchObject({ room: { expectedParticipants: 4 }, me: { isOrganizer: true } });
+    expect(service.get(id, "sam").me?.isOrganizer).toBe(false);
+    expect(JSON.stringify(service.get(id, null))).not.toContain("organizerParticipantId");
+    service.setReady(id, "alex", { ready: true });
+    expect(() => service.finish(id, "alex", { overrideMissing: true })).toThrowError(expect.objectContaining({ code: "NOT_READY" }));
+    service.setReady(id, "sam", { ready: true });
+    for (const person of ["alex", "sam"]) expect(() => service.finish(id, person)).toThrowError(expect.objectContaining({ code: "MISSING_INVITEES" }));
+    expect(() => service.finish(id, "sam", { overrideMissing: true })).toThrowError(expect.objectContaining({ code: "ORGANIZER_REQUIRED", status: 403 }));
+    expect(() => service.finish(id, "alex", { overrideMissing: "true" })).toThrowError(expect.objectContaining({ status: 400 }));
+    expect(service.get(id, "alex").state).toBe("open");
+    service.finish(id, "alex", { overrideMissing: true });
+    const result = service.get(id, "sam").result;
+    expect(result).toMatchObject({ participantCount: 2, expectedParticipantCount: 4, invitationOverride: true, closedEarly: true });
+    service.startRound(id, "sam", input);
+    expect(service.get(id, "alex")).toMatchObject({ room: { expectedParticipants: 4, round: 2 }, me: { isOrganizer: true } });
+    expect(service.archive(id).rounds[0].result).toEqual(result);
+  });
+  it("allows a guest to finish once the expected group has joined and everyone is ready", () => {
+    const { id } = service.create("alex", { ...input, expectedParticipants: 2 });
+    service.join(id, "sam", { displayName: "Sam" });
+    for (const person of ["alex", "sam"]) service.setReady(id, person, { ready: true });
+    service.finish(id, "sam");
+    expect(service.get(id, null).result).toMatchObject({ participantCount: 2, expectedParticipantCount: 2, invitationOverride: false, closedEarly: true });
+  });
+  it("keeps the automatic deadline when invitees are missing and no one marked ready", () => {
+    const { id } = service.create("alex", { ...input, expectedParticipants: 4 });
+    service.savePreferences(id, "alex", { cuisines: ["Italian"] });
+    now += ROUND_MS;
+    expect(service.get(id, null).result).toMatchObject({ winner: { placeName: "Pasta place" }, participantCount: 1, expectedParticipantCount: 4, invitationOverride: false, closedEarly: false, closedAt: now });
+  });
+  it("validates the optional headcount without making it a join limit", () => {
+    for (const value of [0, 33, 1.5, "4"]) expect(() => service.create("alex", { ...input, expectedParticipants: value })).toThrowError(expect.objectContaining({ status: 400 }));
+    const { id } = service.create("alex", { ...input, expectedParticipants: 1 });
+    service.join(id, "sam", { displayName: "Sam" });
+    for (const person of ["alex", "sam"]) service.setReady(id, person, { ready: true });
+    service.finish(id, "sam");
+    expect(service.get(id, null).result).toMatchObject({ participantCount: 2, expectedParticipantCount: 1, invitationOverride: false });
+  });
   it("shares optional block-reason counts and clears reasons when the response changes", () => {
     const { id } = service.create("alex", input);
     const meal = service.get(id, "alex").options[0].id;
@@ -168,7 +209,7 @@ describe("real SQLite room service", () => {
     service.leave(id, "alex");
     expect(service.get(id, "alex")).toMatchObject({ participants: [], me: null, options: [{ blockCount: 0 }, { blockCount: 0 }] });
     service.join(id, "alex", { displayName: "Alex again" });
-    expect(service.get(id, "alex").me).toEqual({ id: before.me?.id, displayName: "Alex again", preferences: preferencesInput.parse({}), choices: {}, blockReasons: {}, ready: false });
+    expect(service.get(id, "alex").me).toEqual({ id: before.me?.id, displayName: "Alex again", preferences: preferencesInput.parse({}), choices: {}, blockReasons: {}, ready: false, isOrganizer: true });
   });
   it("deletes an option's responses and gives a replacement a new order", () => {
     const { id } = service.create("alex", input);

@@ -38,14 +38,14 @@ afterEach(() => {
 });
 
 it("revokes existing participant authority and private snapshots immediately on forgetting", () => {
-  const { id } = service.create(hash, input);
+  const { id } = service.create(hash, { ...input, expectedParticipants: 4 });
   const option = service.get(id, hash).options[0].id;
   profiles.forget(hash);
   const writes = [
     () => service.savePreferences(id, hash, {}), () => service.respond(id, hash, option, { choice: "approve" }),
     () => service.addOption(id, hash, input.options[0]), () => service.removeOption(id, hash, option),
     () => service.setReady(id, hash, { ready: true }), () => service.leave(id, hash),
-    () => service.finish(id, hash), () => service.startRound(id, hash, input),
+    () => service.finish(id, hash), () => service.finish(id, hash, { overrideMissing: true }), () => service.startRound(id, hash, input),
     () => service.join(id, hash, { displayName: "Alex" }),
     () => profiles.update(hash, { displayName: "Alex" }), () => profiles.removeRoom(hash, id),
   ];

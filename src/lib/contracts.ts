@@ -36,6 +36,7 @@ export const createRoomInput = z.object({
   mealDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date."),
   area: z.string().trim().max(120).default(""),
   timeZone: z.string().min(1).max(100),
+  expectedParticipants: z.number().int().min(1).max(LIMITS.participants).nullable().default(null),
   options: z.array(optionInput).max(LIMITS.options, "Use at most 20 meal ideas.").default([]),
   preferences: savedPreferencesInput.optional(),
 });
@@ -45,6 +46,7 @@ export const roundInput = z.object({
   options: z.array(optionInput).min(1, "Add a new idea for this round.").max(LIMITS.options, "Use at most 20 meal ideas."),
 });
 export const readyInput = z.object({ ready: z.boolean() });
+export const finishInput = z.object({ overrideMissing: z.boolean().default(false) });
 
 export const joinInput = z.object({ displayName: name, preferences: savedPreferencesInput.optional() });
 export const preferencesInput = z.object({
@@ -99,15 +101,17 @@ export type DecisionResult = {
   participantCount: number; voterCount: number; preferenceCount: number;
   excludedApprovalCount: number; groupMatchPercent: number | null; closedAt: number;
   closedEarly?: boolean;
+  expectedParticipantCount?: number;
+  invitationOverride?: boolean;
 };
 
 export type RoomSnapshot = {
-  room: { id: string; title: string; mealDate: string; area: string; timeZone: string; createdAt: number; deadlineAt: number; round: number };
+  room: { id: string; title: string; mealDate: string; area: string; timeZone: string; createdAt: number; deadlineAt: number; round: number; expectedParticipants: number | null };
   serverNow: number;
   state: "open" | "closed";
   participants: { id: string; displayName: string; responded: boolean; ready: boolean }[];
   options: MealOption[];
-  me: { id: string; displayName: string; preferences: Preferences; choices: Record<number, Choice>; blockReasons: Record<number, BlockReason>; ready: boolean } | null;
+  me: { id: string; displayName: string; preferences: Preferences; choices: Record<number, Choice>; blockReasons: Record<number, BlockReason>; ready: boolean; isOrganizer: boolean } | null;
   result: DecisionResult | null;
   archiveCount: number;
 };

@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { openDatabase } from "@/server/db";
 import { GET } from "@/app/api/health/route";
-import { checkDatabase, validateEnvironment } from "../../scripts/runtime.mjs";
+import { checkDatabase, schemaVersion, validateEnvironment } from "../../scripts/runtime.mjs";
 
 let directory: string, database: ReturnType<typeof openDatabase>;
 const cache = globalThis as typeof globalThis & { letsEatDatabase?: ReturnType<typeof openDatabase> };
@@ -60,5 +60,5 @@ it("fails startup clearly on inaccessible databases and logs only sanitized rele
   migrate(database.db, { migrationsFolder: "drizzle" });
   const ready = spawnSync(process.execPath, ["scripts/check-startup.mjs"], { env: { ...process.env, APP_ORIGIN: "http://localhost:3000", DATABASE_PATH: join(directory, "test.sqlite"), RENDER_GIT_COMMIT: "a".repeat(40) }, encoding: "utf8" });
   expect(ready.status, ready.stderr).toBe(0);
-  expect(JSON.parse(ready.stdout)).toEqual({ event: "startup", status: "ready", commit: "a".repeat(40), origin: "http://localhost:3000", schema: "0003_blue_network" });
+  expect(JSON.parse(ready.stdout)).toEqual({ event: "startup", status: "ready", commit: "a".repeat(40), origin: "http://localhost:3000", schema: schemaVersion });
 });
