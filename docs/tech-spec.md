@@ -76,7 +76,7 @@ There are three page routes:
 
 - **/**: display name, date, and a place/time idea, with a room-first option. Secondary meal and restaurant details live in optional disclosures. Detect the browser's IANA time zone, show it, and store it with the room. Successful creation redirects to the shareable room.
 - **/r/[roomId]**: header and copy-link action, participation count, inline join form before voting for guests, meal cards, readiness controls, collapsed participant statuses and preferences, and the result/new-round form after closure. Voting precedes supporting panels on mobile.
-- **/demo**: fabricated options, participant responses, and preferences held only in component state. Shared meal cards, result rendering, and the pure decision function demonstrate votes, preference fallback, and all-excluded results immediately. No room API calls, cookies, database writes, or deadline changes.
+- **/demo**: fabricated options, participant responses, and preferences held only in component state. Shared meal cards, result rendering, and the pure decision function demonstrate votes, preference fallback, and all-excluded results immediately. No room API calls, cookie changes, database writes, or deadline changes.
 
 Use the same page for Open and Closed. A closed page disables contributions to that round and displays the saved outcome; active participants can start another round using the same link. Anonymous visitors can view either state.
 

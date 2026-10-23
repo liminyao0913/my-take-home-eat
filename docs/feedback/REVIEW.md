@@ -19,7 +19,7 @@ The observations below describe the original review. All six requested improveme
 | 5. Mobile voting | Guests join above the cards; participants get voting before collapsed people/preferences panels, with a small preferences shortcut and response statuses. | 375-pixel browser layout/keyboard checks and screenshot; no horizontal overflow. |
 | 6. Quick results | **Try a demo** opens prefilled fictional options and inputs, voting, immediate **Show result**, preference-only recommendations, and an all-excluded example. | Home-to-result browser journey under one minute; no room API requests; shared production decision function. |
 
-The rationale is recorded in [APPROACH.md](../../APPROACH.md#ux-review-implementation), and the current behavior is reflected in the [product plan](../plan.md) and [technical spec](../tech-spec.md). The regular production-build browser suite passed all 17 runnable scenarios. Release evidence is tracked in [verification.md](../verification.md).
+The rationale is recorded in [APPROACH.md](../../APPROACH.md#ux-review-implementation), and the current behavior is reflected in the [product plan](../plan.md) and [technical spec](../tech-spec.md). All 17 regular production-build browser scenarios passed, as did the separate unaccelerated ten-minute test. The public URL also passed a two-session smoke test after a verified, data-preserving SQLite migration. Release evidence is tracked in [verification.md](../verification.md).
 
 ## Review scope
 

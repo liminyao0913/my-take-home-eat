@@ -12,6 +12,7 @@ The six review improvements are implemented and running at the existing public a
 | Unit tests | 17 passed, including unknown restaurant fields and preference scoring. |
 | SQLite integration tests | 17 passed, including readiness, reasons, early finish, repeat rounds, stale-round rejection, persistence, and populated original-schema migration. |
 | Regular production-build browser suite | 17 passed in 1.4 minutes; the actual ten-minute case runs separately. |
+| Unaccelerated deadline | Passed in 10.0 minutes. Two browser sessions received the same winner; the original 600,000 ms deadline was retained and the saved closing time equaled that deadline. All 18 browser scenarios are now verified. |
 | Quick demo | Home → vote → result in under one minute without room API requests; vote, preference-only, and all-excluded outcomes verified. |
 | Early finish | Three browser sessions; a newly joined unready participant prevents finishing; explicit confirmation freezes the same result for everyone without changing the stored deadline. |
 | Recovery and repeat rounds | Constraint reasons synchronize; the alternative action focuses a single form; a new round retains link, identities, preferences, and history, clears responses/readiness, and rejects stale writes. A closed second browser detects the new round through polling. |
@@ -24,6 +25,7 @@ The six review improvements are implemented and running at the existing public a
 Current local evidence (ignored by Git):
 
 - Regular browser report: `.data/ux-review-regular-report/index.html`.
+- Full-duration deadline report: `.data/ux-review-deadline-report/index.html` (also the latest `playwright-report/index.html`).
 - Public smoke assertions and outcome: `.data/ux-review-public-smoke.mjs` and `.data/ux-review-public-smoke.json`.
 - Screenshots: `.data/ux-review-home.png`, `.data/ux-review-demo-result.png`, `.data/ux-review-public-mobile.png`.
 - Pre-migration backup: `.data/pre-ux-review.sqlite`; original-column checksums: `.data/pre-ux-review-checks.json`.
