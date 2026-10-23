@@ -85,7 +85,7 @@ describe("browser profiles in SQLite", () => {
     database.sqlite.close(); database = openDatabase(filename);
     people = new ProfileService(database.db, () => now);
     expect(suggestions().suggestions[0].approvalRounds).toBe(1);
-    expect(people.history("alex").rooms[0].previousRounds).toHaveLength(1);
+    expect(people.history("alex").rooms[0].archiveCount).toBe(1);
   });
   it("settles expired rooms from history and captures deadline signals, including empty rounds", () => {
     const { id } = rooms.create("alex", input);
@@ -170,7 +170,7 @@ describe("browser profiles in SQLite", () => {
     const imported = people.history("alex").rooms;
     expect(imported.map((room) => room.roomId)).toEqual([id]);
     expect(imported[0].role).toBe("joined");
-    expect(imported[0].previousRounds).toHaveLength(1);
+    expect(imported[0].archiveCount).toBe(1);
     expect(imported.some((room) => room.roomId === unrelated.id)).toBe(false);
     expect(suggestions().suggestions.map((item) => item.placeName)).toEqual(["Current meal"]);
     expect(people.get("alex").profile?.preferences).toEqual({ cuisines: [], maxPriceLevel: null });

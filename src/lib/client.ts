@@ -16,7 +16,9 @@ export async function request<T>(path: string, method = "GET", value?: unknown, 
     const details = await response.json().catch(() => ({ code: "SERVER_ERROR", message: "The server couldn't complete your request. Please try again." }));
     throw new RequestError(details);
   }
-  return response.json();
+  const result = await response.json();
+  if (method !== "GET" && path !== "/api/profile/recommendations" && typeof window !== "undefined") window.dispatchEvent(new Event("lets-eat:meals-changed"));
+  return result;
 }
 
 export function errorDetails(error: unknown): ApiErrorBody {

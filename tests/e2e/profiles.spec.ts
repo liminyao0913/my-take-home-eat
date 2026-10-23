@@ -286,3 +286,65 @@ test("a no-vote outcome is manually reusable but does not invent a recommendatio
   await expect(page.getByText("No past approvals or approved group picks yet.", { exact: false })).toBeVisible();
   await expect(page.getByRole("article", { name: "Suggested Little Thai" })).toHaveCount(0);
 });
+
+test("My meals and Recent meals refresh on return while preserving preference and meal drafts", async ({ page }) => {
+  const url = await createRoom(page, false);
+  const original = await snapshot(page);
+  const mine = await page.context().newPage();
+  const home = await page.context().newPage();
+  await mine.goto("/me");
+  await mine.getByLabel("Default name").fill("Unsaved default name");
+  await home.goto("/");
+  await home.getByLabel("Place name", { exact: true }).fill("Unfinished meal idea");
+  await expect(home.locator(".recent-meals")).toContainText("Open");
+  await page.request.put(`${apiUrl(url)}/participants/me/ready`, { headers, data: { ready: true } });
+  expect((await page.request.post(`${apiUrl(url)}/finish`, { headers })).status()).toBe(200);
+  await mine.bringToFront(); await mine.evaluate(() => window.dispatchEvent(new Event("focus")));
+  const entry = mine.getByRole("article", { name: "Lunch with the crew" });
+  await expect(entry).toContainText("Decided");
+  await expect(mine.getByLabel("Default name")).toHaveValue("Unsaved default name");
+  await home.bringToFront(); await home.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(home.locator(".recent-meals")).toContainText("Decided");
+  await expect(home.getByLabel("Place name", { exact: true })).toHaveValue("Unfinished meal idea");
+  expect((await page.request.post(`${apiUrl(url)}/rounds`, { headers, data: { mealDate: tomorrow(), options: [{ placeName: "Another round", startTime: "13:00" }] } })).status()).toBe(201);
+  await mine.bringToFront(); await mine.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(entry).toContainText("Round 2"); await expect(entry.locator(".history-status")).toHaveText("Open");
+  await expect(mine.getByLabel("Default name")).toHaveValue("Unsaved default name");
+  await mine.route("**/api/profile/rooms?*", (route) => route.abort());
+  await mine.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(mine.getByRole("button", { name: "Retry history" })).toBeVisible();
+  await expect(entry).toBeVisible();
+  await expect(mine.getByLabel("Default name")).toHaveValue("Unsaved default name");
+  await mine.unroute("**/api/profile/rooms?*");
+  await page.request.delete(`/api/profile/rooms/${original.room.id}`, { headers });
+  await mine.getByRole("button", { name: "Retry history" }).click();
+  await expect(entry).toHaveCount(0);
+  await home.close(); await mine.close();
+});
+
+test("an obsolete history response cannot replace a newer result or reset a draft", async ({ page }) => {
+  const url = await createRoom(page, false);
+  await page.goto("/me");
+  const entry = page.getByRole("article", { name: "Lunch with the crew" });
+  await expect(entry.locator(".history-status")).toHaveText("Open");
+  await page.getByLabel("Default name").fill("Keep this draft");
+  let received!: () => void, release!: () => void;
+  const reached = new Promise<void>((resolve) => { received = resolve; });
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  let first = true;
+  await page.route("**/api/profile/rooms?*", async (route) => {
+    if (!first) { await route.continue(); return; }
+    first = false;
+    const response = await route.fetch(); received(); await blocked;
+    await route.fulfill({ response }).catch(() => {});
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event("focus"))); await reached;
+  await page.request.put(`${apiUrl(url)}/participants/me/ready`, { headers, data: { ready: true } });
+  expect((await page.request.post(`${apiUrl(url)}/finish`, { headers })).status()).toBe(200);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(entry.locator(".history-status")).toHaveText("Decided");
+  release();
+  await expect(entry).toHaveCount(1);
+  await expect(entry.locator(".history-status")).toHaveText("Decided");
+  await expect(page.getByLabel("Default name")).toHaveValue("Keep this draft");
+});

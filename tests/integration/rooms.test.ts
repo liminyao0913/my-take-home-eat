@@ -102,7 +102,7 @@ describe("real SQLite room service", () => {
     expect(after.participants.every((p) => !p.ready)).toBe(true);
     expect(after.options).toHaveLength(1);
     expect(after.options[0]).toMatchObject({ placeName: "A closer place", approvalCount: 0, blockCount: 0 });
-    expect(after.previousRounds[0].result).toEqual(closed);
+    expect(service.archive(id).rounds[0].result).toEqual(closed);
     expect(() => service.savePreferences(id, "sam", {})).toThrowError(expect.objectContaining({ code: "STALE_ROUND" }));
     expect(() => service.startRound(id, "sam", next)).toThrowError(expect.objectContaining({ code: "STALE_ROUND" }));
     const secondRound = new RoomService(database.db, () => now, 2);
@@ -110,7 +110,7 @@ describe("real SQLite room service", () => {
     database.sqlite.close(); database = openDatabase(filename);
     const restored = new RoomService(database.db, () => now, 2).get(id, "sam");
     expect(restored.options[0].approvalCount).toBe(1);
-    expect(restored.previousRounds[0].result).toEqual(closed);
+    expect(new RoomService(database.db).archive(id).rounds[0].result).toEqual(closed);
   });
   it("creates atomically with a fixed deadline, and rolls back invalid creation", () => {
     expect(() => service.create("alex", { ...input, options: [option, { ...option, startTime: "10:05" }] })).toThrow();

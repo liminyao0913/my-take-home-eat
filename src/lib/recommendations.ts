@@ -7,7 +7,7 @@ const placeKey = (place: { placeName: string; location: string; sourceOptionId: 
 export function recommend(rounds: PersonalRound[], preferences: SavedPreferences, area: string, otherAreas: boolean, now: number): Suggestions {
   const seen = new Set<string>();
   const recent = rounds.filter((item) => item.closedAt >= now - PROFILE_IDLE_MS && item.closedAt <= now)
-    .sort((a, b) => b.closedAt - a.closedAt || a.roomId.localeCompare(b.roomId) || b.round - a.round)
+    .sort((a, b) => b.closedAt - a.closedAt || (a.roomId < b.roomId ? -1 : a.roomId > b.roomId ? 1 : 0) || b.round - a.round)
     .filter((item) => { const key = `${item.roomId}:${item.round}`; if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 20);
   function collect(input: PersonalRound[]) {
     const places = new Map<string, { suggestion: Suggestion; approvals: Set<string>; picks: Set<string> }>();

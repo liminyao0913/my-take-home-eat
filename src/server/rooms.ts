@@ -1,11 +1,11 @@
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
-import { and, asc, count, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNull, lt } from "drizzle-orm";
 import { LIMITS } from "@/lib/limits";
 import {
   BLOCK_REASONS, createRoomInput, joinInput, optionInput, roomPreferencesInput, readyInput, responseInput, roundInput, ROUND_MS,
-  type MealOption, type OptionInput, type Preferences, type RoomSnapshot,
+  type MealOption, type OptionInput, type Preferences, type RoomSnapshot, type RoundPage,
 } from "@/lib/contracts";
 import { decide } from "@/lib/decision";
 import { minuteOfDay, minuteToTime, toInstant } from "@/lib/time";
@@ -74,22 +74,37 @@ function loadInputs(db: Query, room: Room) {
   const votes = db.select({ participantId: responses.participantId, optionId: responses.optionId, choice: responses.choice, reason: responses.reason }).from(responses)
     .innerJoin(participants, eq(participants.id, responses.participantId)).innerJoin(options, eq(options.id, responses.optionId))
     .where(and(eq(participants.roomId, room.id), eq(options.roomId, room.id), eq(participants.active, true))).all();
+  const counts = new Map<number, { approvalCount: number; blockCount: number; reasons: Map<string, number> }>();
+  const responded = new Set<string>();
+  const approved = new Set<string>();
+  const personal = new Map<string, { choices: NonNullable<RoomSnapshot["me"]>["choices"]; blockReasons: NonNullable<RoomSnapshot["me"]>["blockReasons"] }>();
+  for (const vote of votes) {
+    const tally = counts.get(vote.optionId) ?? { approvalCount: 0, blockCount: 0, reasons: new Map() };
+    const own = personal.get(vote.participantId) ?? { choices: {}, blockReasons: {} };
+    responded.add(vote.participantId); own.choices[vote.optionId] = vote.choice;
+    if (vote.choice === "approve") { tally.approvalCount++; approved.add(vote.participantId); }
+    else {
+      tally.blockCount++;
+      if (vote.reason) { tally.reasons.set(vote.reason, (tally.reasons.get(vote.reason) ?? 0) + 1); own.blockReasons[vote.optionId] = vote.reason; }
+    }
+    counts.set(vote.optionId, tally); personal.set(vote.participantId, own);
+  }
   const meals: MealOption[] = db.select().from(options).where(eq(options.roomId, room.id)).orderBy(asc(options.id)).all().map((o) => ({
     id: o.id, authorId: o.authorId, placeName: o.placeName, location: o.location, startAt: o.startAt, cuisine: o.cuisine,
     priceLevel: o.priceLevel, link: o.link,
-    approvalCount: votes.filter((v) => v.optionId === o.id && v.choice === "approve").length,
-    blockCount: votes.filter((v) => v.optionId === o.id && v.choice === "block").length,
-    blockReasons: BLOCK_REASONS.map((reason) => ({ reason, count: votes.filter((v) => v.optionId === o.id && v.choice === "block" && v.reason === reason).length })).filter((r) => r.count),
+    approvalCount: counts.get(o.id)?.approvalCount ?? 0,
+    blockCount: counts.get(o.id)?.blockCount ?? 0,
+    blockReasons: BLOCK_REASONS.map((reason) => ({ reason, count: counts.get(o.id)?.reasons.get(reason) ?? 0 })).filter((r) => r.count),
   }));
-  return { people, votes, meals };
+  return { people, meals, responded, approved, personal };
 }
 
 function finalize(db: Query, room: Room, now: number, early = false): Room {
   if (room.result) return room;
-  const { people, votes, meals } = loadInputs(db, room);
+  const { people, approved, meals } = loadInputs(db, room);
   const result = { ...decide({
     options: meals, preferences: people.map(preferencesOf), participantCount: people.length,
-    voterCount: new Set(votes.filter((v) => v.choice === "approve").map((v) => v.participantId)).size,
+    voterCount: approved.size,
     deadlineAt: early ? now : room.deadlineAt, timeZone: room.timeZone,
   }), closedEarly: early };
   db.update(rooms).set({ result, resolvedAt: now }).where(eq(rooms.id, room.id)).run();
@@ -98,14 +113,14 @@ function finalize(db: Query, room: Room, now: number, early = false): Room {
 }
 
 function snapshot(db: Query, room: Room, tokenHash: string | null, now: number): RoomSnapshot {
-  const { people, votes, meals } = loadInputs(db, room);
+  const { people, responded, personal, meals } = loadInputs(db, room);
   const me = credentialFor(db, tokenHash, now) ? people.find((p) => p.tokenHash === tokenHash) : undefined;
   return {
     room: { id: room.id, title: room.title, mealDate: room.mealDate, area: room.area, timeZone: room.timeZone, createdAt: room.createdAt, deadlineAt: room.deadlineAt, round: room.round },
     state: room.result ? "closed" : "open", serverNow: now,
-    participants: people.map((p) => ({ id: p.id, displayName: p.displayName, ready: p.ready, responded: p.ready || votes.some((v) => v.participantId === p.id) || p.cuisines.length > 0 || p.maxPriceLevel !== null || p.preferredStartMinute !== null })), options: meals, result: room.result,
-    me: me ? { id: me.id, displayName: me.displayName, ready: me.ready, preferences: preferencesOf(me), choices: Object.fromEntries(votes.filter((v) => v.participantId === me.id).map((v) => [v.optionId, v.choice])), blockReasons: Object.fromEntries(votes.filter((v) => v.participantId === me.id && v.choice === "block" && v.reason).map((v) => [v.optionId, v.reason!])) } : null,
-    previousRounds: db.select({ round: roomRounds.round, mealDate: roomRounds.mealDate, result: roomRounds.result }).from(roomRounds).where(eq(roomRounds.roomId, room.id)).orderBy(desc(roomRounds.round)).all(),
+    participants: people.map((p) => ({ id: p.id, displayName: p.displayName, ready: p.ready, responded: p.ready || responded.has(p.id) || p.cuisines.length > 0 || p.maxPriceLevel !== null || p.preferredStartMinute !== null })), options: meals, result: room.result,
+    me: me ? { id: me.id, displayName: me.displayName, ready: me.ready, preferences: preferencesOf(me), ...(personal.get(me.id) ?? { choices: {}, blockReasons: {} }) } : null,
+    archiveCount: db.select({ count: count() }).from(roomRounds).where(eq(roomRounds.roomId, room.id)).get()!.count,
   };
 }
 
@@ -154,6 +169,28 @@ export class RoomService {
       const now = this.now();
       const closed = now >= room.deadlineAt ? finalize(tx, room, now) : room;
       return snapshot(tx, closed, tokenHash, now);
+    }, { behavior: "immediate" });
+  }
+
+  archive(roomId: string, beforeRound?: number): RoundPage {
+    if (beforeRound !== undefined && (!Number.isSafeInteger(beforeRound) || beforeRound < 1)) throw new ApiError(400, "INVALID_PAGE", "Use a valid round number.");
+    return this.db.transaction((tx) => {
+      getRoom(tx, roomId);
+      const page = tx.select({ round: roomRounds.round, mealDate: roomRounds.mealDate, result: roomRounds.result }).from(roomRounds)
+        .where(and(eq(roomRounds.roomId, roomId), beforeRound === undefined ? undefined : lt(roomRounds.round, beforeRound))).orderBy(desc(roomRounds.round)).limit(11).all();
+      return { rounds: page.slice(0, 10), nextBeforeRound: page.length > 10 ? page[9].round : null };
+    });
+  }
+
+  settleForProfile(roomId: string, hash: string, profileId: string) {
+    this.db.transaction((tx) => {
+      const now = this.now();
+      const credential = requireCredential(tx, hash, now);
+      if (credential?.profileId !== profileId) throw new ApiError(401, "PROFILE_REQUIRED", "This browser identity is no longer available.");
+      const membership = tx.select({ roomId: profileRooms.roomId }).from(profileRooms).where(and(eq(profileRooms.profileId, profileId), eq(profileRooms.roomId, roomId), eq(profileRooms.hidden, false))).get();
+      if (!membership) throw new ApiError(404, "NOT_FOUND", "This meal is not in your history.");
+      const room = getRoom(tx, roomId);
+      if (!room.result && now >= room.deadlineAt) finalize(tx, room, now);
     }, { behavior: "immediate" });
   }
 

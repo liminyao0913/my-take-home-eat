@@ -80,7 +80,7 @@ test("rooms, guest identity and results survive application restarts and backup 
     await expectWinner(page, "Pasta House"); expect((await snapshot(page)).result).toEqual(closed.result);
     expect((await snapshot(page)).me?.id).toBe(original.me?.id);
     expect(await (await page.request.get(`${origin}/api/profile`)).json()).toEqual(profile);
-    expect((await (await page.request.get(`${origin}/api/profile/rooms`)).json()).rooms[0]).toMatchObject({ roomId: closed.room.id, role: "created", result: closed.result });
+    expect((await (await page.request.get(`${origin}/api/profile/rooms`)).json()).rooms[0]).toMatchObject({ roomId: closed.room.id, role: "created", result: { closedAt: closed.result!.closedAt, winner: { placeName: closed.result!.winner!.placeName } } });
     const recommendations = await page.request.post(`${origin}/api/profile/recommendations`, { headers: { Origin: origin }, data: { preferences: { cuisines: ["Italian"], maxPriceLevel: 2 } } });
     expect((await recommendations.json()).suggestions[0]).toMatchObject({ placeName: "Pasta House", approvalRounds: 1, groupPickRounds: 1 });
   } finally { await page.goto("about:blank"); await stop(); rmSync(directory, { recursive: true, force: true }); }

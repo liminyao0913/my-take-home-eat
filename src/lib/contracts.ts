@@ -73,12 +73,15 @@ export type PersonalRound = { roomId: string; round: number; closedAt: number; a
 export type Suggestion = PastPlace & { approvalRounds: number; groupPickRounds: number; lastChosenAt: number; matchPercent: number | null; reason: string; area: string };
 export type Suggestions = { suggestions: Suggestion[]; otherAreaCount: number };
 export type ProfileSnapshot = { profile: { id: string; displayName: string; preferences: SavedPreferences } | null; canImportLegacy: boolean };
+export type HistoryResult = { closedAt: number; winner: Pick<MealOption, "placeName" | "approvalCount"> | null };
 export type HistoryRoom = {
   roomId: string; title: string; mealDate: string; area: string; round: number; state: "open" | "closed";
-  role: "created" | "joined"; left: boolean; result: DecisionResult | null;
-  previousRounds: RoomSnapshot["previousRounds"]; ideas: { round: number; place: PastPlace }[];
+  role: "created" | "joined"; left: boolean; result: HistoryResult | null; archiveCount: number;
 };
 export type HistoryPage = { rooms: HistoryRoom[]; hasMore: boolean };
+export type RoundOutcome = { round: number; mealDate: string; result: DecisionResult };
+export type RoundPage = { rounds: RoundOutcome[]; nextBeforeRound: number | null };
+export type IdeasPage = { ideas: { round: number; place: PastPlace }[]; nextBeforeRound: number | null };
 export type Choice = "approve" | "block";
 export type BlockReason = typeof BLOCK_REASONS[number];
 
@@ -106,7 +109,7 @@ export type RoomSnapshot = {
   options: MealOption[];
   me: { id: string; displayName: string; preferences: Preferences; choices: Record<number, Choice>; blockReasons: Record<number, BlockReason>; ready: boolean } | null;
   result: DecisionResult | null;
-  previousRounds: { round: number; mealDate: string; result: DecisionResult }[];
+  archiveCount: number;
 };
 
 export type ApiErrorBody = { code: string; message: string; fieldErrors?: Record<string, string[]> };

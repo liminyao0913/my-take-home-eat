@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { errorDetails, formatDate } from "@/lib/client";
 import { type ApiErrorBody, type RoomSnapshot, type SavedPreferences } from "@/lib/contracts";
+import { RoundHistory } from "./round-history";
 import { CopyButton } from "./copy-button";
 import { emptyOption, Field, FormError, OptionFields } from "./forms";
 import { MealCard, MealResult } from "./meal";
@@ -121,7 +122,7 @@ export function Room({ roomId }: { roomId: string }) {
       <aside className="room-sidebar">
         <details className="panel people-panel"><summary>At the table · {data.participants.length}<span className="small muted">See responses</span></summary><ul>{data.participants.map((person) => <li key={person.id}><span className="avatar" aria-hidden="true">{Array.from(person.displayName)[0].toUpperCase()}</span><span>{person.displayName}{person.id === data.me?.id && <small> you</small>}<small className="person-status">{person.ready ? "Ready to finish" : person.responded ? "Responded" : "No response yet"}</small></span></li>)}</ul>{data.participants.length === 0 && <p className="muted small">No one has joined yet.</p>}{open && data.me && <button className="text-button leave-button" disabled={busy} onClick={() => void action("/participants/me", "DELETE")}>Leave this meal</button>}<p className="small muted">Anyone with the link can join. Your name is remembered in this browser.</p></details>
         {open && data.me && <PreferenceForm key={`${data.me.id}-${data.room.round}`} initial={data.me.preferences} busy={busy} mutate={mutate} detailsRef={preferences} />}
-        {!!data.previousRounds.length && <details className="panel round-history"><summary>Previous rounds · {data.previousRounds.length}</summary>{data.previousRounds.map(({ round, mealDate, result }) => <div key={round}><h3>Round {round} · {formatDate(mealDate)}</h3><p>{result.winner?.placeName ?? "No winner"}</p><p className="small muted">{result.message}</p></div>)}</details>}
+        {!!data.archiveCount && <RoundHistory key={data.room.round} roomId={data.room.id} count={data.archiveCount} className="panel round-history" />}
         <section className="how-it-works"><span className="eyebrow">HOW WE PICK</span><p>Most approvals, then preference match, then the first idea proposed.</p><p>“Can&apos;t do this” rules out an option for the group. Use it for something that really won&apos;t work.</p><p className="small">Check dietary needs and availability with the place. Prices are the group&apos;s estimates.</p></section>
       </aside>
     </div>

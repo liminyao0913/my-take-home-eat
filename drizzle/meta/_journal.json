@@ -22,6 +22,13 @@
       "when": 1792772623445,
       "tag": "0002_pretty_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792784544825,
+      "tag": "0003_blue_network",
+      "breakpoints": true
     }
   ]
 }

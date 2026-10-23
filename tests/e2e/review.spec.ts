@@ -142,7 +142,8 @@ test("constraints guide alternatives and a new round preserves the group on the 
     expect(next.me?.preferences).toEqual(before.me?.preferences);
     expect(next.me?.choices).toEqual({});
     expect(next.options).toHaveLength(1);
-    expect(next.previousRounds[0].result.winner).toBeNull();
+    expect(next.archiveCount).toBe(1);
+    expect((await (await page.request.get(`${apiUrl(url)}/rounds`)).json()).rounds[0].result.winner).toBeNull();
     const staleVote = await page.request.put(`${apiUrl(url)}/options/${next.options[0].id}/response`, { headers: { Origin: new URL(url).origin, "X-Room-Round": "1" }, data: { choice: "block" } });
     expect(staleVote.status()).toBe(409);
     expect((await staleVote.json()).code).toBe("STALE_ROUND");

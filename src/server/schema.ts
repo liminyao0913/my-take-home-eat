@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { BlockReason, Choice, DecisionResult, MealSignal } from "../lib/contracts";
 
@@ -13,7 +13,7 @@ export const rooms = sqliteTable("rooms", {
   round: integer("round").notNull().default(1),
   result: text("result_json", { mode: "json" }).$type<DecisionResult>(),
   resolvedAt: integer("resolved_at"),
-});
+}, (table) => [index("room_open_deadline").on(desc(table.deadlineAt), table.id).where(sql`${table.result} IS NULL`)]);
 
 export const participants = sqliteTable("participants", {
   id: text("id").primaryKey(),
@@ -97,4 +97,4 @@ export const profileRounds = sqliteTable("profile_rounds", {
   closedAt: integer("closed_at").notNull(),
   area: text("area").notNull(),
   signals: text("signals_json", { mode: "json" }).$type<MealSignal[]>().notNull(),
-}, (table) => [primaryKey({ columns: [table.profileId, table.roomId, table.round] }), index("personal_round_recency").on(table.profileId, table.closedAt)]);
+}, (table) => [primaryKey({ columns: [table.profileId, table.roomId, table.round] }), index("personal_round_recency").on(table.profileId, desc(table.closedAt), table.roomId, desc(table.round))]);
