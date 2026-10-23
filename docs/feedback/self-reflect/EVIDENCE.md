@@ -2,6 +2,8 @@
 
 Date: October 23, 2026. Application baseline: `0353851`. Findings are in [REVIEW.md](REVIEW.md). No application, migration, dependency, or deployment configuration was changed during this review.
 
+The subsequent remediation and invitation release is recorded separately in [current verification](../../verification.md#remediation-and-invitations-release). The measurements below remain evidence for the reviewed baseline.
+
 ## Checks executed
 
 | Check | Result |

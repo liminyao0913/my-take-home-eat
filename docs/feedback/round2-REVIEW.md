@@ -1,5 +1,7 @@
 ## Prioritized improvements and validation
 
+Status, October 23, 2026: both P1 items are implemented and pass local and Render browser checks. The table preserves the original findings; follow-up evidence is below.
+
 | Priority | Finding | Recommended next step |
 |---|---|---|
 | P1 | **Invitation completeness remains the organizer's judgment.** The warning before early close is useful, but the reviewed flow did not establish an expected participant count. The live test could finalize a plan with 1/1 joined participants, which says nothing about invitees who have not joined. | Offer an optional expected headcount or invitation checklist. Before closing, show “1 joined of 4 expected” where known. Keep an explicit organizer override so a missing participant cannot indefinitely stall a decision. |
@@ -9,7 +11,7 @@
 
 The three-session local production-browser check now passes in `tests/e2e/group-validation.spec.ts`, using the shared public-only flow in `tests/browser/group-flow.ts`. It verifies anonymous invite viewing, distinct browser identities, simultaneous proposals and independent votes, synchronization, three different private preference sets, and readiness. A guest arriving after two people are ready causes a stale finish to return `409 NOT_READY`. A concurrent finish/vote permits exactly one operation: either closure rejects the late vote, or the accepted vote clears readiness and prevents closure until reconfirmed. All three browsers retain their own inputs and the same result after reload; joining after closure is rejected. SQLite regressions cover both transaction orderings.
 
-The same flow is included in `tests/hosted/service.spec.ts`; its Render result remains pending until the remediation deployment passes. Screenshots and per-session evidence stay in private test artifacts. This also preserves compatibility for rooms that leave the expected headcount blank. The user subsequently authorized the invitation feature below.
+The same flow passed on `https://lets-eat-ba8e.onrender.com` at application commit `c248d63`, using `tests/hosted/service.spec.ts`. Screenshots and per-session evidence stay in private test artifacts. This also preserves compatibility for rooms that leave the expected headcount blank. The user subsequently authorized the invitation feature below.
 
 ## P1 invitation completeness — implementation, October 23, 2026
 
@@ -17,4 +19,4 @@ Implemented an optional **Expected people (including you)** field in Meal detail
 
 The result and copied summary record the actual attendance and organizer override. Headcount is an expectation, not a join cap. It and the organizer stay with the room across rounds; no editing or organizer transfer is added. Existing rooms retain unknown headcount, and migration only identifies an organizer from an existing creator record. Forgetting or losing the organizer browser identity loses override access; the automatic deadline remains available.
 
-Regression coverage includes headcount validation, guest override rejection (including identical display names), unready participant protection, complete-group finish, deadline closure with missing people, migration preservation, and archived results. The shared browser flow in `tests/browser/invitations-flow.ts` runs locally and in the separate hosted suite. Browser and final hosted results will be recorded after deployment.
+Regression coverage includes headcount validation, guest override rejection (including identical display names), unready participant protection, complete-group finish, deadline closure with missing people, migration preservation, and archived results. The shared browser flow in `tests/browser/invitations-flow.ts` runs locally and in the separate hosted suite. The local test passed, and the Render invitation test passed in 9.4 seconds. All three regular hosted scenarios passed in 44.5 seconds after correcting a test synchronization race: the first smoke assertion read before the second vote request completed; traces confirmed both writes succeeded, and the test now waits for saved state. Desktop and mobile screenshots are retained privately. The real ten-minute Render test also passed with two joined of four expected, including a service restart during the open round. Both browsers received the same result at the original deadline, without an organizer override; late votes were rejected. Saved identities, preferences, history, suggestions, and the frozen result survived the restart. [Verification and sanitized evidence](../verification.md#remediation-and-invitations-release).

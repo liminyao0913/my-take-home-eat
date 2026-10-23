@@ -1,10 +1,10 @@
 # Self-review remediation and Render release
 
-Status: implementation authorized and in progress, October 23, 2026. Work branch: `fix/self-reflect-render`, starting from `9834f5e`. Implements the findings in [the self-review](feedback/self-reflect/REVIEW.md); it does not implement the broader next-features plan. The user subsequently authorized configuring the existing Render service and adding service version information. Those delivery changes are recorded in verification. The user has now authorized all remediation below, publication of the feature branch, and deployment and verification on Render.
+Status: implemented and verified locally and on Render, October 23, 2026. Work branch: `fix/self-reflect-render`, starting from `9834f5e`. Implements the findings in [the self-review](feedback/self-reflect/REVIEW.md); it does not implement the broader next-features plan. The user subsequently authorized configuring the existing Render service and adding service version information. Those delivery changes are recorded in verification. The user has now authorized all remediation below, publication of the feature branch, and deployment and verification on Render.
 
 The user has selected Render at **https://lets-eat-ba8e.onrender.com/**. This supersedes the earlier LAN-only delivery decision. Keep localhost development, SQLite, automatic browser identity, and the existing voting rules. Do not add accounts, email, Google discovery, notifications, PostgreSQL, Redis, or a separate backend.
 
-Implementation checkpoint: bounded uploads and admission, transactional room limits, transaction-time credential checks, read-only identity lookup, bounded background expiry cleanup, and a 100 ms HTTP SQLite busy timeout are implemented. All 76 unit/integration tests, TypeScript, and ESLint pass locally. Regressions cover delayed uploads after forgetting, expiry across an external write lock, read availability during contention, participant churn, oversized legacy rounds, and bounded cleanup. Bounded history, startup readiness, headers/logging, dependency review, and the regular browser scenarios are also implemented and locally verified. The constrained 20-group capacity gate and P1 three-browser local validation also pass. Real-deadline release checks, final documentation reconciliation, and hosted verification remain pending. This is not a release-completion claim.
+Implementation checkpoint: bounded uploads and admission, transactional room limits, transaction-time credential checks, read-only identity lookup, bounded background expiry cleanup, and a 100 ms HTTP SQLite busy timeout are implemented. All 81 unit/integration tests, TypeScript, and ESLint pass locally. Regressions cover delayed uploads after forgetting, expiry across an external write lock, read availability during contention, participant churn, oversized legacy rounds, and bounded cleanup. Bounded history, startup readiness, headers/logging, dependency review, and the regular browser scenarios are also implemented and locally verified. The constrained 20-group capacity gate and P1 three-browser local validation also pass. The local unaccelerated ten-minute release check passed. The user additionally authorized the P1 invitation-completeness feature: optional headcount, organizer-only missing-invitee confirmation, and preserved automatic deadline. All 30 local browser scenarios are verified across the regular and real-duration runs. Hosted smoke, P1 three-browser validation, invitation completeness, real ten-minute closure with missing invitees, and persistence across an actual Render restart all pass. Current results and operating setup are recorded in [verification](verification.md#remediation-and-invitations-release) and [deployment](deployment.md). F8 retains the documented development-only esbuild advisory exception; the production audit is clean.
 
 ## 1. Deployment baseline and immediate recovery
 
@@ -14,7 +14,7 @@ Configure the **existing service**, without creating another service:
 
 | Setting | Value |
 | --- | --- |
-| Source | `https://github.com/liminyao0913/my-take-home-eat`, currently deployed from `master` |
+| Source | `https://github.com/liminyao0913/my-take-home-eat`, release branch `fix/self-reflect-render`, automatic deploys off |
 | Node | `24.22.1`, from `.node-version` |
 | Build Command | `npm ci --include=dev && npm run build` |
 | Start Command | `npm run start:host` |
@@ -32,7 +32,7 @@ Initial deployment failures, subsequently corrected through the Render API:
 - A real browser create request returned 403 `WRONG_ORIGIN`: the running origin configuration did not match the HTTPS address.
 - A subsequent owner-supplied deploy log places `npm run start:host` in the **Build Command** field. It runs migrations and starts Next without building `.next`, so deployment fails. Put build and start commands in their separate fields above. Migrations during build do not prepare a runtime-mounted database.
 
-The initial readiness failure was distinct from review F5: health correctly failed here, whereas F5 reproduces a partially migrated database that incorrectly passes. Deployment configuration is now corrected; F5's incomplete schema check still needs implementation.
+The initial readiness failure was distinct from review F5: health correctly failed here, whereas F5 reproduces a partially migrated database that incorrectly passes. Deployment configuration is now corrected; F5's complete migration/schema check is now implemented and covered by partial-schema regression tests.
 
 Use startup logs to verify `Database migrations applied.` before Next starts. First require health 200 and an anonymous profile GET 200; then exercise create/join. An existing database must be backed up before migration. Do not delete a database, run ad hoc schema SQL, or weaken Origin checks to hide these errors. [Deployment/recovery procedure](deployment.md).
 
@@ -42,9 +42,9 @@ Keep a single instance and scale its CPU/memory vertically when measurements jus
 
 Initial acceptance target: **20 active groups × 8 participants**, three options each, polling every three seconds, with ordinary votes/preferences and overlapping deadlines. The earlier 100-group loopback run used a 24-CPU, 62.2-GiB workstation; it does not establish capacity on Render. More allocated resources improve headroom but do not correct authorization races, unlimited input, or unnecessary write locks.
 
-Measure a production build under the confirmed CPU/memory allocation, using a disposable database first. Run 20 groups for ten minutes, then a simultaneous-deadline burst. Record request counts, latency percentiles, error codes, event-loop delay, RSS, CPU, database/WAL size, and winner correctness. Proposed release gates: zero unexpected errors or lost accepted writes; p95 ordinary API latency below 1 second; health below 1 second; steady RSS below 75% of allocated memory and no upward trend or restarts. These are targets, not measured hosted results. Raise load to 50/100 groups only after the initial gate passes on an isolated environment.
+Measure a production build under the confirmed CPU/memory allocation, using a disposable database first. Run 20 groups for ten minutes, then a simultaneous-deadline burst. Record request counts, latency percentiles, error codes, event-loop delay, RSS, CPU, database/WAL size, and winner correctness. Release gates: zero unexpected errors or lost accepted writes; p95 ordinary API latency below 1 second; health below 1 second; steady RSS below 75% of allocated memory and no upward trend or restarts. These are targets, not measured hosted results. Raise load to 50/100 groups only after the initial gate passes on an isolated environment.
 
-Use Render's metrics and logs plus application timing; do not infer process memory/CPU from public HTTP responses. Monitor disk usage at 70%/85% and leave space for WAL, migrations, and a temporary backup. The allocation is confirmed; these capacity measurements are still pending.
+Use Render's metrics and logs plus application timing; do not infer process memory/CPU from public HTTP responses. Monitor disk usage at 70%/85% and leave space for WAL, migrations, and a temporary backup. The allocation is confirmed. Both the initial remediation and final invitation builds passed 600-second runs under matching enforced 1 CPU / 2 GiB local limits for 20 groups of eight. The capacity runner allows 16 MiB GC/runtime variation between steady-window RSS medians after a two-minute warm-up; record the actual change and full samples rather than claiming long-term leak freedom. This does not measure Render network or disk performance.
 
 ## 3. F1 — bound requests, room growth, and admission
 
@@ -113,7 +113,7 @@ No automatic deletion of shared history is introduced. Room/round admission boun
 
 ## 7. F7/F8 — hosted security and dependency maintenance
 
-Render's HTTPS origin supersedes the old public-HTTP transport boundary. Verify HTTP redirects to HTTPS and that an actual create/join response issues an HttpOnly, Secure, SameSite=Lax cookie. The redirect passed in the initial probe. After deployment repair, a real create/join flow verified the Secure, HttpOnly, SameSite=Lax credential. Frame protection and the other application hardening still require implementation. Keep exact Origin validation and private/no-store API responses. Do not accept all forwarded origins to accommodate deployment mistakes.
+Render's HTTPS origin supersedes the old public-HTTP transport boundary. Verify HTTP redirects to HTTPS and that an actual create/join response issues an HttpOnly, Secure, SameSite=Lax cookie. The redirect passed in the initial probe. After deployment repair, a real create/join flow verified the Secure, HttpOnly, SameSite=Lax credential. Frame protection and the application hardening are implemented; the hosted suite verifies response headers. Keep exact Origin validation and private/no-store API responses. Do not accept all forwarded origins to accommodate deployment mistakes.
 
 Add frame protection to HTML responses: CSP `frame-ancestors 'none'` and `X-Frame-Options: DENY`. Test the app, demo, and client navigation; avoid introducing a broad script policy that breaks Next hydration. Do not log cookies, private preferences, full room links, or request bodies. Retain only route templates, status, duration, error code, and a request correlation identifier.
 
@@ -135,17 +135,17 @@ Hosted smoke is low volume and uses only clearly named disposable rooms through 
 
 No public delete-room or clock-control endpoint exists or should be added for tests. Record test-room identifiers in private artifacts; forgetting removes only personal data, so shared test rooms remain unless removed later by a narrowly scoped maintenance action. Do not claim complete cleanup through forgetting. Do not run load/abuse/restore tests against the live URL: use a separate temporary service/database matching the Render allocation.
 
-Expose `/api/version` with the package version and full deployed Git commit, independently of database readiness; show the version in the shared header. Use `RENDER_GIT_COMMIT` for the deployment revision and `null` when unavailable, rather than inventing a local revision. Record the deployed commit, service resource allocation, timestamps, result counts, and screenshots. Keep cookie-bearing storage/traces private and out of Git; commit only sanitized results. The latest actual URL probe and remaining gates are recorded in [verification.md](verification.md#render-baseline-and-self-review-remediation).
+Expose `/api/version` with the package version and full deployed Git commit, independently of database readiness; show the version in the shared header. Use `RENDER_GIT_COMMIT` for the deployment revision and `null` when unavailable, rather than inventing a local revision. Record the deployed commit, service resource allocation, timestamps, result counts, and screenshots. Keep cookie-bearing storage/traces private and out of Git; commit only sanitized results. Release results are recorded in [verification.md](verification.md#remediation-and-invitations-release).
 
 ## 9. Implementation sequence and completion
 
 | Stage | Work | Completion evidence |
 | --- | --- | --- |
 | 0 — delivered | Correct the existing Render build/start/origin/disk settings | Runtime migrations, health/profile 200, hosted create/join, secure cookies, actual redeploy persistence, and allocation verified in the delivery record. |
-| 1 | F1 input/admission limits and F2 authorization | Isolated abuse, race, expiry, and ownership regressions pass. |
-| 2 | F3 bounded reads/maintenance and F5 readiness | Lock probe, incomplete-schema tests, startup/restart and backup restore pass. |
-| 3 | F4 summaries/pagination and F6 refresh | Large-history bounds, deterministic recommendations, multi-tab freshness, preserved drafts. |
-| 4 | F7 headers/cookies, F8 compatible updates, documentation | Build/audits and existing unit/integration/browser suites pass; docs distinguish targets from evidence. |
-| 5 | Deploy a tested commit and run hosted release checks | Low-volume multi-browser smoke, real deadline, confirmed restart durability, and resource measurements recorded. |
+| 1 — delivered | F1 input/admission limits and F2 authorization | Isolated abuse, race, expiry, and ownership regressions pass. |
+| 2 — delivered | F3 bounded reads/maintenance and F5 readiness | Lock probe, incomplete-schema tests, startup/restart and backup restore pass. |
+| 3 — delivered | F4 summaries/pagination and F6 refresh | Large-history bounds, deterministic recommendations, multi-tab freshness, preserved drafts. |
+| 4 — delivered | F7 headers/cookies, F8 compatible updates, documentation | Build/audits and existing unit/integration/browser suites pass; docs distinguish targets from evidence. |
+| 5 — delivered | Deploy a tested commit and run hosted release checks | Low-volume multi-browser smoke, real deadline, confirmed restart durability, and resource measurements recorded. |
 
-Commit each completed stage on this branch. The user has authorized switching the linked Render branch to `fix/self-reflect-render`; keep automatic deploys off and deliberately deploy tested commit SHAs. Local setup now uses `http://localhost:3000` and a localhost-bound server; update the untracked local origin accordingly. Render configuration and the separately requested version feature are delivered independently of the proposed remediation. Do not mark remaining findings resolved until their acceptance evidence is recorded.
+Commit each completed stage on this branch. The user has authorized switching the linked Render branch to `fix/self-reflect-render`; keep automatic deploys off and deliberately deploy tested commit SHAs. Local setup now uses `http://localhost:3000` and a localhost-bound server; update the untracked local origin accordingly. Render configuration and the requested version feature preceded the implemented remediation. Do not mark remaining findings resolved until their acceptance evidence is recorded.

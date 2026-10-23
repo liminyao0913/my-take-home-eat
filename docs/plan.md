@@ -1,6 +1,6 @@
 # Let's Eat — simple v1 product plan
 
-Status: product baseline updated for the [UX review](feedback/REVIEW.md), including early completion, repeat rounds, simpler setup, and an instant demo. Implementation choices are in [the technical spec](tech-spec.md).
+Status: product baseline updated for the [UX review](feedback/REVIEW.md), including early completion, repeat rounds, simpler setup, an instant demo, and [invitation completeness](feedback/round2-REVIEW.md). Implementation choices are in [the technical spec](tech-spec.md).
 
 The implemented [identity/history extension](identity-and-history-plan.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and suggestions. The broader [next feature plan](next-features-plan.md) remains deferred; its brainstorming is not the current delivery checklist. Security and capacity boundaries are specified in [self-review remediation for Render](self-reflect-remediation-tech-spec.md), preserving the meal decision rules below.
 

@@ -1,0 +1,166 @@
+{
+  "applicationCommit": "c248d636327fc45d11285e1c8aff7d7d4895c7b6",
+  "version": "0.1.0",
+  "origin": "https://lets-eat-ba8e.onrender.com",
+  "deployId": "dep-dbds9lbl550s7387m5eg",
+  "settings": {
+    "serviceId": "srv-dbdq644ipgvc739okdj0",
+    "branch": "fix/self-reflect-render",
+    "autoDeploy": "no",
+    "url": "https://lets-eat-ba8e.onrender.com",
+    "plan": "1c-2g",
+    "region": "virginia",
+    "instances": 1,
+    "healthCheckPath": "/api/health",
+    "commands": {
+      "buildCommand": "npm ci --include=dev && npm run build",
+      "startCommand": "npm run start:host"
+    }
+  },
+  "local": {
+    "unitIntegrationTests": 81,
+    "regularBrowserCases": 29,
+    "realDeadlineCases": 1,
+    "lint": "passed",
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "migrationGeneration": "no drift",
+    "localBinding": "127.0.0.1:3000",
+    "supervisor": "systemd user lets-eat-local.service",
+    "sharedRowsPreserved": {
+      "rooms": 5,
+      "participants": 8,
+      "options": 6,
+      "responses": 3,
+      "room_rounds": 0
+    }
+  },
+  "hostedSmoke": {
+    "passed": true,
+    "cases": 3,
+    "durationSeconds": 44.5,
+    "checks": [
+      "demo",
+      "full HTTPS clipboard invite",
+      "distinct browser identities",
+      "contributions and votes",
+      "private/saved preferences",
+      "early result",
+      "history and recommendations",
+      "reload",
+      "Secure HttpOnly SameSite=Lax cookie",
+      "Origin rejection",
+      "HTTP to HTTPS redirect",
+      "frame protection",
+      "exact deployed version"
+    ]
+  },
+  "groupValidation": {
+    "checkedAt": "2026-10-23T20:38:39.259Z",
+    "participantCount": 3,
+    "distinctIdentities": 3,
+    "raceOrder": "vote-before-finish",
+    "rejectedStaleFinish": 409,
+    "rejectedJoinAfterClosure": true,
+    "privatePreferencesIsolated": true
+  },
+  "invitations": {
+    "checkedAt": "2026-10-23T20:38:48.674Z",
+    "expected": 4,
+    "joined": 2,
+    "rejectedUnready": 409,
+    "rejectedImplicitFinish": 409,
+    "rejectedGuestOverride": 403,
+    "result": {
+      "participantCount": 2,
+      "expectedParticipantCount": 4,
+      "invitationOverride": true,
+      "closedEarly": true
+    }
+  },
+  "deadline": {
+    "createdAt": 1792787802837,
+    "deadlineAt": 1792788402837,
+    "observedAt": 1792788404946,
+    "result": {
+      "participantCount": 2,
+      "expectedParticipantCount": 4,
+      "invitationOverride": false,
+      "closedEarly": false,
+      "closedAt": 1792788402837,
+      "basis": "votes"
+    },
+    "approvalCount": 2
+  },
+  "restart": {
+    "checkedAt": "2026-10-23T20:40:04Z",
+    "health": 200,
+    "instanceBefore": "srv-dbdq644ipgvc739okdj0-m7wz5",
+    "instanceAfter": "srv-dbdq644ipgvc739okdj0-g5gtj",
+    "instanceCreatedAt": "2026-10-23T20:39:31Z",
+    "instanceReplaced": true
+  },
+  "persistence": {
+    "checkedAt": "2026-10-23T20:41:12.133Z",
+    "retained": [
+      "identity",
+      "preferences",
+      "votes",
+      "history",
+      "result",
+      "recommendations"
+    ]
+  },
+  "migration": {
+    "migrations": 5,
+    "originalDataPreserved": {
+      "rooms": true,
+      "participants": true,
+      "options": true,
+      "responses": true,
+      "room_rounds": true,
+      "profiles": true,
+      "browser_credentials": true,
+      "profile_rooms": true,
+      "profile_rounds": true
+    },
+    "tableCountsBeforeHostedTests": {
+      "rooms": 5,
+      "participants": 7,
+      "options": 9,
+      "responses": 4,
+      "room_rounds": 0,
+      "profiles": 5,
+      "browser_credentials": 5,
+      "profile_rooms": 7,
+      "profile_rounds": 6
+    },
+    "integrity": "ok",
+    "foreignKeyErrors": 0,
+    "diskUsedPercent": 1.6741908946808715,
+    "memoryMax": "2147483648",
+    "cpuMax": "100000 100000",
+    "maxRound": 1,
+    "maxParticipants": 2,
+    "maxOptions": 3
+  },
+  "backup": {
+    "preDeploymentCopyVerified": true,
+    "dailyTimer": "04:15 America/Los_Angeles",
+    "dailyCopiesToRetain": 7,
+    "verifiedDailyCopies": 1,
+    "warningPercent": 70,
+    "criticalPercent": 85
+  },
+  "capacityEvidence": "invitation-capacity-20261023.json",
+  "ci": [
+    "https://github.com/liminyao0913/my-take-home-eat/actions/runs/40020195643",
+    "https://github.com/liminyao0913/my-take-home-eat/actions/runs/40021134946"
+  ],
+  "limitations": [
+    "Capacity was measured in a disposable localhost service with matching compute limits, not against Render network/disk.",
+    "One development-only esbuild advisory remains through stable drizzle-kit; production audit is clean.",
+    "Private screenshots, cookie-bearing storage/traces, and room identifiers are excluded from this evidence.",
+    "Five labeled hosted rooms were created, including one from the initial test synchronization failure; shared rooms remain."
+  ]
+}

@@ -25,6 +25,20 @@ npm start
 
 Do not run `next build` over a live process's `.next` directory. Tests can use an isolated source/build copy. For another localhost port, set `APP_ORIGIN` to that exact origin and pass the same port to `npm start -- --port 3001`.
 
+On the current workstation, `lets-eat-local.service` is enabled in the systemd user manager. It runs this checkout's production build with the pinned binary `~/.local/share/lets-eat/node24/bin/node`, applies migrations and startup checks, binds only to `127.0.0.1:3000` through `--hostname localhost`, and restarts after failure. Its unit is in `~/.config/systemd/user/`; user lingering is enabled. The local database and existing `.env.local` remain on this machine.
+
+```sh
+systemctl --user status lets-eat-local.service
+journalctl --user -u lets-eat-local.service
+# Stop before installing/building a replacement, then start after checks:
+systemctl --user stop lets-eat-local.service
+npm run db:backup -- /path/to/a-new-backup.sqlite
+npm ci
+npm run build
+systemctl --user start lets-eat-local.service
+curl --fail-with-body http://localhost:3000/api/health
+```
+
 ## Render settings
 
 Use the existing service `srv-dbdq644ipgvc739okdj0`, with repository [liminyao0913/my-take-home-eat](https://github.com/liminyao0913/my-take-home-eat) and release branch `fix/self-reflect-render`. Automatic deployments stay off; push the branch and deploy a deliberately selected tested commit. This does not merge the feature branch into `master`.
@@ -117,7 +131,7 @@ npm run test:e2e
 npm run test:e2e:release -- --grep 'unaccelerated ten-minute'
 ```
 
-The local suite owns localhost ports 3100/3101 and temporary databases. It includes real HTTP upload/collection races and a P1 three-browser group journey. Fixtures refuse non-test database paths. Do not redirect this suite to Render.
+The local suite owns localhost ports 3100/3101 and temporary databases. It includes real HTTP upload/collection races, a P1 three-browser group journey, and the invitation headcount/organizer override flow. Fixtures refuse non-test database paths. Do not redirect this suite to Render.
 
 The separate hosted suite requires an explicit HTTPS target and starts no server or SQLite fixture:
 
@@ -126,7 +140,7 @@ HOSTED_BASE_URL=https://lets-eat-ba8e.onrender.com HOSTED_ARTIFACT_DIR=.data/hos
 HOSTED_BASE_URL=https://lets-eat-ba8e.onrender.com HOSTED_ARTIFACT_DIR=.data/hosted/release RUN_HOSTED_DEADLINE=1 HOSTED_DEADLINE_ONLY=1 npm run test:hosted
 ```
 
-Readiness, profile, redirect, headers, and commit checks run before stateful tests. Regular hosted checks use labeled rooms and independent browser contexts for copied invites, contributions, private preferences, readiness/results, history/recommendations, and P1 late-arrival/close-versus-vote behavior. The deadline case waits a real ten minutes with no database or clock edits. Set `EXPECTED_COMMIT` when verifying a specific deploy.
+Readiness, profile, redirect, headers, and commit checks run before stateful tests. Regular hosted checks use labeled rooms and independent browser contexts for copied invites, contributions, private preferences, readiness/results, history/recommendations, and P1 late-arrival/close-versus-vote behavior. The invitation case verifies the expected count, guest override rejection, explicit organizer confirmation, copied attendance note, and mobile layout. The deadline case waits a real ten minutes with two joined of four expected and no database or clock edits. Set `EXPECTED_COMMIT` when verifying a specific deploy.
 
 After a deliberate Render restart/redeploy, reuse the same artifact directory:
 

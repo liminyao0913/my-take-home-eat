@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-23T20:41:52.517Z",
+  "commit": "c248d636327fc45d11285e1c8aff7d7d4895c7b6",
+  "groups": 20,
+  "participants": 160,
+  "durationSeconds": 600,
+  "resources": {
+    "cpuMax": "100000 100000",
+    "memoryMax": 2147483648,
+    "oomKills": 0,
+    "restarts": 0
+  },
+  "requests": {
+    "setup": {
+      "count": 500,
+      "p50Ms": 5.782,
+      "p95Ms": 8.858,
+      "p99Ms": 11.047,
+      "maxMs": 60.178
+    },
+    "ordinary": {
+      "count": 33560,
+      "p50Ms": 2.763,
+      "p95Ms": 4.422,
+      "p99Ms": 69.394,
+      "maxMs": 134.275
+    },
+    "deadline": {
+      "count": 160,
+      "p50Ms": 151.43,
+      "p95Ms": 301.683,
+      "p99Ms": 306.791,
+      "maxMs": 307.668
+    },
+    "health": {
+      "count": 60,
+      "p50Ms": 1.569,
+      "p95Ms": 4.054,
+      "p99Ms": 120.863,
+      "maxMs": 120.863
+    }
+  },
+  "statuses": {
+    "200": 34260,
+    "201": 20
+  },
+  "acceptedWrites": 2040,
+  "lostWrites": 0,
+  "missedPolls": 0,
+  "errors": [],
+  "runtime": {
+    "steadyRssMax": 229404672,
+    "earlySteadyRssMedian": 218701824,
+    "lateSteadyRssMedian": 228999168,
+    "eventLoopP95Ms": 23.281663,
+    "eventLoopMaxMs": 81.330175,
+    "cpuP95Percent": 19.414659999999998,
+    "databaseBytes": 331776,
+    "walBytes": 4157112
+  },
+  "passed": true,
+  "environment": "Disposable localhost systemd service; enforced 1 CPU / 2 GiB, separate from live Render",
+  "limitations": "Measures application work under matching compute limits, not Render network/disk performance or long-term memory behavior. Steady-window RSS medians rose by 9.8 MiB, within the predeclared 16 MiB GC/runtime allowance."
+}

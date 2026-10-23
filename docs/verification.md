@@ -1,8 +1,28 @@
 # Verification
 
-Latest verification: October 23, 2026. The local release used Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.4, and Playwright Chromium. Render is now the selected public host. Its initial failures below were repaired, and the subsequent hosted smoke passed; the recovery/version checks are recorded separately. The existing LAN service and its configuration were not changed.
+Latest completed verification: October 23, 2026, on `fix/self-reflect-render`. Current setup uses **localhost:3000** locally and **https://lets-eat-ba8e.onrender.com** publicly, with separate SQLite databases. The stack is Node 24.22.1, Next.js 16.4.3, SQLite 3.53.4, and Playwright Chromium. Earlier LAN, deployment-recovery, and version-only observations below are historical records, not current setup instructions.
+
+## Remediation and invitations release
+
+The self-review application fixes F1–F7 are implemented, along with the compatible Next.js patch for F8. P1 group validation and invitation completeness were subsequently authorized and implemented. The broader next-features plan remains deferred.
+
+Local evidence for invitation commit `c248d63`: 81 unit/integration tests, TypeScript, ESLint, migration generation with no drift, and a production build pass. All 29 regular browser scenarios pass (2.2 minutes), including the P1 three-browser and invitation journeys, HTTP limits, privacy, history refresh, and actual local restart/backup restoration. Desktop confirmation and 375-pixel result screenshots were visually inspected. The final application also passed the separate unaccelerated ten-minute local decision test: all 30 local browser scenarios are verified across the regular and full-duration runs. Capacity, hosted smoke/P1, restart continuity, and both real-deadline checks pass.
+
+The pre-invitation Render backup contains five rooms, passes integrity and foreign-key checks, and matches its remote SHA-256. It is retained privately in `.data/backups/pre-invitations-c248d63/`. The local production systemd service is enabled and healthy on localhost only; migration retained all original shared fields across five rooms, eight participants, six options, three responses, and the empty archive. Integrity and foreign-key checks pass. The independent daily off-host backup timer is enabled for 04:15 America/Los_Angeles retaining seven dated daily copies and checking disk thresholds; see [deployment](deployment.md). Render deployment `dep-dbds9lbl550s7387m5eg` is live at `c248d636327fc45d11285e1c8aff7d7d4895c7b6`. SSH verified all five migrations and the original values in all nine application tables against the pre-deployment backup (five rooms / seven participants / nine options / four responses). Integrity and foreign-key checks passed; runtime cgroups confirm 1 CPU / 2 GiB and disk usage is 1.67%. No existing shared or personal data was reset.
+
+The first constrained capacity run passed with 20 groups / 160 participants for 600 seconds, no errors, lost writes, missed polls, restarts, or OOMs. Ordinary p95 was 4.177 ms, simultaneous-deadline p95 242.606 ms, and steady RSS maximum 232,632,320 bytes. [Sanitized measurements](feedback/self-reflect/evidence/remediation-capacity-20261023.json) distinguish these local resource-constrained results from hosted network/disk behavior. The final invitation build passed its own 600-second run: 34,280 requests, 2,040 accepted writes, no errors/lost writes/missed polls/restarts/OOMs. Ordinary p95 was 4.422 ms, deadline-burst p95 301.683 ms, health maximum 120.863 ms, and steady RSS maximum 229,404,672 bytes (218.8 MiB). Steady-window median RSS increased 9.8 MiB, within the predeclared 16 MiB runtime allowance; this short run does not establish long-term memory behavior. [Final-build capacity evidence](feedback/self-reflect/evidence/invitation-capacity-20261023.json).
+
+Hosted checks on the deployed application now pass: two-browser smoke (16.8 s), P1 three-browser group interaction (16.8 s), and invitation completeness with mobile layout and copied attendance (9.4 s), 44.5 s total. The first hosted smoke asserted before the second vote finished; traces confirmed both writes returned 200. The test was corrected to wait for saved state, with no application change. Private generated reports are excluded from ESLint so repeat verification does not lint bundled trace-viewer assets.
+
+A deliberate Render restart replaced instance `m7wz5` with `g5gtj`; health recovered and the saved-browser persistence test passed (4.0 s). Both identities, private inputs, saved preferences, personal history, suggestions, and the exact frozen result survived. The separate real ten-minute hosted case also passed (10.1 minutes), spanning that restart with two joined of four expected. Both browsers received the same two-approval winner at the unchanged original deadline; `closedEarly=false`, `invitationOverride=false`, and a post-deadline vote was rejected. [GitHub Actions for the deployed application](https://github.com/liminyao0913/my-take-home-eat/actions/runs/40020195643) and [the subsequent test-harness commit](https://github.com/liminyao0913/my-take-home-eat/actions/runs/40021134946) also passed. The latter changes tests and lint ignores only; the serving application remains `c248d63`.
+
+The full dependency audit retains four moderate package entries for one development-only esbuild advisory through the latest stable drizzle-kit; the production audit is clean. The affected esbuild server is not used. [Recorded maintenance exception](deployment.md#dependency-maintenance).
+
+[Sanitized release evidence](feedback/self-reflect/evidence/invitations-render-release-20261023.json) records the serving commit, settings, P1 results, deadline timestamps, preserved data, restart, and backup policy. Private artifacts are `.data/hosted/invitations-c248d63-verified/` (regular and restart runs), `.data/hosted/invitations-c248d63-deadline/`, `.data/local-invitations-regular-report/`, and `.data/local-invitations-deadline-report/`. No hosted clock or database deadline was modified. Five labeled test rooms remain, including the first smoke attempt; no real rooms were deleted. The temporary capacity process/database were removed, while the local production service and daily backup timer remain enabled.
 
 ## Render baseline and self-review remediation
+
+**Historical checkpoint, before the remediation release above.** Statements about unimplemented fixes, the linked `master` branch, and unchanged LAN settings describe that earlier deployment.
 
 Work branch: `fix/self-reflect-render`, based on `9834f5e`. The [technical spec](self-reflect-remediation-tech-spec.md) defines proposed fixes for F1–F8 and the hosted release gates. The user subsequently authorized Render setup and a small version feature. The service settings/Blueprint were corrected; the requested header version and `/api/version` are separate from the proposed review fixes. No dependency, migration, or local environment change was made.
 
@@ -58,6 +78,8 @@ The final public-URL check completed at **18:46:02 UTC**. Sanitized results are 
 
 ## Browser identity and personal history
 
+**Historical LAN release evidence.** Current local setup uses localhost only.
+
 The separate [identity/history plan](identity-and-history-plan.md) is implemented. No work from the broader next-features plan is included.
 
 | Check | Outcome |
@@ -92,7 +114,7 @@ All 24 distinct browser scenarios are verified across the regular, full-duration
 
 ## UX review improvements
 
-The six review improvements were verified on October 22 at the then-configured public address. They remain part of the current LAN release. See the [review follow-up](feedback/REVIEW.md#implementation-follow-up) for the feature-to-test mapping.
+The six review improvements were verified on October 22 at the then-configured public address. They remain in the product; this section records the earlier public-IP/LAN release. See the [review follow-up](feedback/REVIEW.md#implementation-follow-up) for the feature-to-test mapping.
 
 | Check | Outcome |
 | --- | --- |

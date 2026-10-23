@@ -4,7 +4,7 @@ A shared meal decision room for a small group. The product and implementation ar
 
 Browser continuity, saved preferences, personal history, and meal suggestions are described in the [identity/history plan](docs/identity-and-history-plan.md) and [implementation spec](docs/identity-and-history-tech-spec.md).
 
-The [self-review remediation spec](docs/self-reflect-remediation-tech-spec.md) records the security, scalability, and reliability work on `fix/self-reflect-render`; see [verification](docs/verification.md#render-baseline-and-self-review-remediation) for the current hosted results.
+The [self-review remediation spec](docs/self-reflect-remediation-tech-spec.md) records the security, scalability, and reliability work on `fix/self-reflect-render`; see [verification](docs/verification.md#remediation-and-invitations-release) for the current hosted results.
 
 ## Run locally
 
@@ -31,9 +31,9 @@ Development and production startup apply migrations and validate configuration, 
 
 Choose **Try a demo** on the home page to vote and see a sample result immediately, including preference-only and all-excluded examples. The demo never saves data to real rooms.
 
-Create a room with a name, meal date, and a place/time idea, or create it empty and add ideas together. Secondary restaurant details are optional. Share its URL with friends; they only need a display name. Everyone can add options, approve several meals, mark an option they cannot do with an optional constraint reason, and save private cuisine, price, or time preferences.
+Create a room with a name, meal date, and a place/time idea, or create it empty and add ideas together. Secondary restaurant details are optional. Under **Meal details**, the creator can set expected people (including themselves). Share its URL with friends; they only need a display name. Everyone can add options, approve several meals, mark an option they cannot do with an optional constraint reason, and save private cuisine, price, or time preferences.
 
-Mark **I’m done** when ready. Under **Meal details**, optionally set expected people (including yourself). The room shows joined versus expected. Once everyone who joined is ready, any participant can confirm an early finish if the expected group is present. If people are missing, only the organizer can explicitly finish without them. Leaving the headcount blank keeps the usual joined-person rule. The round still closes automatically after ten minutes. Any option with a block is excluded. Most approvals wins, then preference match, then proposal order. With no votes, preferences pick the meal; with no input, the first eligible proposal wins. A no-approval winner is labeled as a suggestion. The result is saved even if all browsers were closed at the deadline.
+The room shows joined versus expected when a headcount was set. Mark **I’m done** when ready. Once everyone who joined is ready, any participant can confirm an early finish if the expected group is present. If people are missing, only the organizer can explicitly finish without them. Leaving the headcount blank keeps the usual joined-person rule. The round still closes automatically after ten minutes. Any option with a block is excluded. Most approvals wins, then preference match, then proposal order. With no votes, preferences pick the meal; with no input, the first eligible proposal wins. A no-approval winner is labeled as a suggestion. The result is saved even if all browsers were closed at the deadline.
 
 If all ideas are excluded, add an alternative while the round is open. After closure, **Start another round in this room** keeps the link, participants, and preferences, with new ideas and cleared votes. Previous results remain in round history, loaded ten rounds at a time. Each room supports 20 current options, 32 participant identities (including departed people), and 100 rounds. The service admits up to 100 open rounds and 10,000 stored rooms.
 
@@ -69,7 +69,7 @@ It fails if the URL is missing. See the [deployment guide](docs/deployment.md#lo
 
 ## Deploy
 
-Render is now the selected public host: [https://lets-eat-ba8e.onrender.com/](https://lets-eat-ba8e.onrender.com/). The missing-schema and Origin configuration errors were repaired, and the earlier hosted meal flow passed. The remediation release adds bounded requests/history, revocation checks, readiness checks, and frame protection. See [verification](docs/verification.md#render-baseline-and-self-review-remediation) for release evidence and remaining hardening work. The existing service uses:
+Render is now the selected public host: [https://lets-eat-ba8e.onrender.com/](https://lets-eat-ba8e.onrender.com/). The missing-schema and Origin configuration errors were repaired, and the earlier hosted meal flow passed. The remediation release adds bounded requests/history, revocation checks, readiness checks, and frame protection. See [verification](docs/verification.md#remediation-and-invitations-release) for release evidence and remaining hardening work. The existing service uses:
 
 | Render setting | Value |
 | --- | --- |
