@@ -2,6 +2,8 @@
 
 Reviewed October 23, 2026, against commit `0353851`. Scope: application code, SQLite access, browser behavior, dependencies, deployment configuration, tests, and documentation. This is a review; the findings below have not been fixed.
 
+Follow-up: the user subsequently selected Render hosting. The [remediation spec](../../self-reflect-remediation-tech-spec.md) maps F1–F8 to implementation and acceptance checks, and [hosted verification](../../verification.md#render-baseline-and-self-review-remediation) records the new baseline. The LAN observations and priorities below describe the reviewed deployment, not proof that the hosted service is ready.
+
 The service can support several groups on the current machine. Bounded tests with 20 and 100 groups of eight completed without request errors. **Keep SQLite for the current LAN-first product.** The immediate problems are missing resource limits, an in-flight credential-revocation race, and work that grows without bounds as history accumulates. The present implementation should not be treated as ready for unrestricted public traffic.
 
 All mutation probes and load tests used temporary databases and a separate loopback-only server. The running LAN service was not restarted or reconfigured. Detailed methods and limitations are in [EVIDENCE.md](EVIDENCE.md); measured results are in [review-results.json](evidence/review-results.json).

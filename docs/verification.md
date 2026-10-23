@@ -1,6 +1,51 @@
 # Verification
 
-Latest verification: October 23, 2026 using Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.4, and Playwright Chromium. The user's LAN origin `http://192.168.86.52:3000` is preserved; managed hosting remains deferred.
+Latest verification: October 23, 2026. The local release used Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.4, and Playwright Chromium. Render is now the selected public host. Its initial failures below were repaired, and the subsequent hosted smoke passed; the recovery/version checks are recorded separately. The existing LAN service and its configuration were not changed.
+
+## Render baseline and self-review remediation
+
+Work branch: `fix/self-reflect-render`, based on `9834f5e`. The [technical spec](self-reflect-remediation-tech-spec.md) defines proposed fixes for F1–F8 and the hosted release gates. The user subsequently authorized Render setup and a small version feature. The service settings/Blueprint were corrected; the requested header version and `/api/version` are separate from the proposed review fixes. No dependency, migration, or local environment change was made.
+
+The URL was tested directly from the development machine through curl and headless Playwright Chromium, using real HTTPS requests, a desktop viewport, and a 375-pixel phone viewport. The latest complete baseline probe started at **2026-10-23 18:22:55 UTC**. [Sanitized results](feedback/self-reflect/evidence/render-baseline-20261023.json).
+
+| Hosted check | Observed result |
+| --- | --- |
+| HTTPS home | 200; create form visible. |
+| HTTP entry | 301 to the HTTPS hostname. |
+| `/api/health` | 503, `{"status":"unavailable"}`. |
+| Anonymous `/api/profile` | 500, generic `SERVER_ERROR`. |
+| Demo | Vote winner, preference-only winner, and all-excluded result passed; zero room API requests during the demo. |
+| One valid create submission | 403 `WRONG_ORIGIN`; exact error visible, name/place drafts preserved. No test room was created. |
+| My meals on phone viewport | Error/retry state visible after profile failure; no horizontal overflow. Personal history could not be tested. |
+| Browser runtime | No uncaught page errors in the completed probe. Server/API failures above remain failures. |
+| Secure identity cookie, join/vote, saved defaults/history, real deadline | Not verified on Render: creation/readiness failed and no identity cookie was issued. |
+| Restart durability and resource capacity | Not verified on Render; requires runtime disk/settings access and a planned restart, plus an isolated capacity environment. |
+
+The owner supplied a runtime log with `SqliteError: no such table: profiles`, confirming missing schema in the database used by the app. A subsequent supplied deploy log checked out `9834f5e` from `master` but ran `npm run start:host` in the **Build Command** field; it failed because `.next` had no production build. That log identifies a failed deployment attempt, not proof of the revision currently serving requests.
+
+The [deployment guide](deployment.md#recover-the-observed-deployment) gives the correction: build with `npm ci --include=dev && npm run build`, start with `npm run start:host`, set the exact HTTPS `APP_ORIGIN`, and point `DATABASE_PATH` at an attached persistent disk. Subsequent authenticated API/SSH inspection confirmed a 1 CPU / 2 GiB Virginia instance, unset origin/database environment values, an empty fallback SQLite file, no disk, and no health-check path. Those findings informed the recovery recorded below.
+
+Local artifacts are in the ignored `.data/render-readiness-20261023/` directory: the probe script, JSON result, and home/demo/create-error/My meals screenshots. The create-error screenshot was visually inspected. The probe made only labeled test submissions, all rejected; no cleanup or production database edits were performed. No load, credential-race, or destructive test ran against Render.
+
+The preceding [self-review evidence](feedback/self-reflect/EVIDENCE.md) records the unchanged baseline's local tests. Those results did not override the hosted failures. The proposed permanent hosted runner is not yet implemented; the existing suite still owns local temporary databases and processes. The ad hoc hosted probes and the version feature's fresh local checks are recorded below.
+
+### Recovery after authorized Render access
+
+The user supplied SSH access and authorized Render CLI account access to complete setup. API inspection confirmed the misplaced build/start commands, absent environment variables and health path, a `1c-2g` Virginia instance, and no attached disk. SSH confirmed a 2,147,483,648-byte memory limit and an empty fallback SQLite file. A consistent copy of that empty file was saved off-host before configuration changed.
+
+The existing service now has the documented build/start commands, exact HTTPS origin, `/var/data/lets-eat.sqlite`, a new 1 GB disk at `/var/data`, `/api/health`, and automatic deploys off. Compute size and instance count were retained. Deployment of `9834f5e` succeeded at 18:34 UTC; runtime logs confirmed migrations before startup. Subsequent SSH checks found all three migrations, the mounted disk, valid integrity, and no foreign-key errors. The updated Blueprint passed Render CLI validation.
+
+A real Playwright smoke at 18:35 UTC passed creation, full HTTPS clipboard invite, joining from a separate phone context, participant-added options, private/default preferences, concurrent approvals, early finish with identical results, mobile reload continuity, My meals, returning suggestions, and unrelated-Origin rejection. The issued cookie is Secure, HttpOnly, and SameSite=Lax. There were no uncaught browser errors. Two clearly labeled test rooms were created; the second is the real ten-minute preference-only case, initially scheduled to close at 18:45:19 UTC.
+
+Evidence: [render-deployment-20261023.json](feedback/self-reflect/evidence/render-deployment-20261023.json). Private room identifiers, browser storage, screenshots, and scripts stay in `.data/render-live-smoke-20261023/`. A consistent pre-version backup was copied off-host and passed integrity/foreign-key checks; it includes all rows, including a separate user-created room. No real meal data was removed or rewritten, and the LAN database was not copied to Render.
+
+### Version information and local checks
+
+The requested version feature adds a header link and `/api/version`, returning the package version (`0.1.0`) and full `RENDER_GIT_COMMIT`, or `null` if unavailable. The endpoint is uncached and independent of SQLite, so it identifies a release even if readiness fails. Remaining self-review application fixes are still proposed.
+
+Fresh typecheck/lint, 24 unit tests, 27 integration tests, a production build, and all 23 regular browser cases passed with the version change. The regular suite took 1.9 minutes and skipped only its separate ten-minute local case. Build/browser checks used an isolated source copy, leaving the running LAN build intact. Additional checks passed for a 375-pixel version label without overflow, correct JSON/no-store headers, a null local commit fallback, and version availability while health returned 503 against an unmigrated test database.
+
+Hosted version, real-deadline, and post-deployment persistence checks are in progress; they are not implied by the local passes above.
 
 ## Browser identity and personal history
 

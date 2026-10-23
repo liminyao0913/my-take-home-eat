@@ -4,7 +4,7 @@ Status: implementation specification. Current progress and verification results 
 
 Identity/history extension: [the separate implementation spec](identity-and-history-tech-spec.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and creator suggestions. Its credential lifecycle and private APIs supersede the original guest-only behavior below; group voting rules remain the same.
 
-Delivery update: the user selected **local delivery** during implementation. Complete the app, local release tests, ten-minute deadline check, and restart/restore verification. The Render setup below is retained for a future deployment; hosted checks are deferred.
+Delivery update, October 23: local release tests are recorded in [verification](verification.md). The user now selected **Render** at `https://lets-eat-ba8e.onrender.com`. The [remediation spec](self-reflect-remediation-tech-spec.md) defines the next fixes and hosted acceptance gates, and the [deployment guide](deployment.md) gives the exact settings. The initial hosted check found configuration failures; a reachable homepage is not a verified release.
 
 ## 1. What we need and what we choose
 
@@ -12,14 +12,14 @@ Build **one full-stack TypeScript application backed by a SQLite file**. UI, bac
 
 | Responsibility | Choice | Reason |
 | --- | --- | --- |
-| UI and routing | Next.js 16 App Router, React, TypeScript | One application for the two pages and their server endpoints. |
+| UI and routing | Next.js 16 App Router, React, TypeScript | One application for home, shared rooms, demo, My meals, and their server endpoints. |
 | Styling | Tailwind CSS and semantic HTML controls | A small responsive interface without a component framework. |
 | Backend | Next.js Route Handlers in the Node.js runtime | Same-origin JSON APIs, shared types, and one deployment. |
 | Database | SQLite, as requested | Persistent storage without a separate database server. |
 | Database access | Drizzle ORM with better-sqlite3 | Typed schema and queries, SQL migrations, and local transactions. |
 | Validation | Zod | Validate every request on the server and share input contracts with forms. |
 | Time conversion | Intl for display; @js-temporal/polyfill on the server | Convert the room's local meal times into unambiguous instants. |
-| Shared updates | Fetch the room every three seconds while visible and open | Enough for a small group without a connection service. |
+| Shared updates | Fetch the room every three seconds while visible, including after closure | Keeps results current and detects another round on the same link. |
 | Runtime and packages | Node.js 24 LTS and npm | Pin the runtime and commit package-lock.json for repeatable installs. |
 | Automated tests | Vitest plus Playwright | Test decision logic and database behavior, then the complete browser journey. |
 | Hosting | One Render Node web service with a persistent disk | One deployed app and a durable local database file. |
@@ -49,6 +49,8 @@ src/
   app/
     page.tsx                   # Create a room
     r/[roomId]/page.tsx         # Shared room and its final result
+    demo/page.tsx              # Immediate, client-only sample decisions
+    me/page.tsx                # Browser defaults and personal history
     api/                       # Route Handlers
   components/                  # Forms, option cards, people, result
   lib/
@@ -74,11 +76,12 @@ Database modules are server-only. Keep form drafts in React state and use ordina
 
 ## 3. UI behavior
 
-There are three page routes:
+There are four page routes:
 
 - **/**: display name, date, and a place/time idea, with a room-first option. Secondary meal and restaurant details live in optional disclosures. Detect the browser's IANA time zone, show it, and store it with the room. Successful creation redirects to the shareable room.
 - **/r/[roomId]**: header and copy-link action, participation count, inline join form before voting for guests, meal cards, readiness controls, collapsed participant statuses and preferences, and the result/new-round form after closure. Voting precedes supporting panels on mobile.
 - **/demo**: fabricated options, participant responses, and preferences held only in component state. Shared meal cards, result rendering, and the pure decision function demonstrate votes, preference fallback, and all-excluded results immediately. No room API calls, cookie changes, database writes, or deadline changes.
+- **/me**: saved browser defaults, personal room history, reuse/removal, legacy import, and forgetting. See the identity/history spec for its private APIs.
 
 Use the same page for Open and Closed. A closed page disables contributions to that round and displays the saved outcome; active participants can start another round using the same link. Anonymous visitors can view either state.
 
@@ -158,7 +161,7 @@ All endpoints use JSON. Successful room mutations return the updated snapshot, i
 | PUT /api/rooms/:roomId/participants/me/ready | Set the caller’s ready boolean; no automatic closure. |
 | POST /api/rooms/:roomId/finish | Require at least one option and all active participants ready; finalize immediately. |
 | POST /api/rooms/:roomId/rounds | After closure/expiry, supply a meal date and at least one new option. Archive the old result, clear options/responses/readiness, retain people/preferences, increment round, and start a fresh deadline atomically. |
-| GET /api/health | Readiness check that verifies the database is accessible and migrated; expose no private data. |
+| GET /api/health | Currently checks access to the `rooms` table. Complete migration/schema readiness is required by remediation F5 but not yet implemented; expose no private data. |
 
 The room snapshot contains room metadata, serverNow, state, active participant names and responded/ready flags, option details and aggregate vote/reason counts, result, previousRounds, and an optional me object. Only me contains private preferences and the caller’s own choices and reason tags. A participant counts as responded when they have a response, saved preferences, or readiness; the flag does not imply approval. Set Cache-Control: private, no-store on room responses and disable fetch caching.
 
@@ -319,8 +322,8 @@ Before claiming completion, record the commands and outcomes, the deployed URL, 
 | 3. Decision inputs | Preferences, approvals, blocks, leaving, ownership checks | Relevant unit and integration tests pass; UI actions agree across contexts. |
 | 4. Closure | Atomic deadline checks, scoring, stored result and explanation | Preference/vote/tie cases pass; late writes fail; closure survives offline intervals. |
 | 5. Complete UI and E2E | Responsive forms, errors, final summary, full browser suite | All required browser journeys pass against the production build and real SQLite. |
-| 6. Local release | Running local app, backup/restore instructions, release browser suite | Local link works across sessions; normal deadline, application restart, and backup restoration are verified. Public hosting is deferred. |
+| 6. Local release | Running local app, backup/restore instructions, release browser suite | Local link works across sessions; normal deadline, application restart, and backup restoration are verified. The subsequent Render release follows the remediation spec. |
 
 Commit each coherent milestone using the repository's configured Git identity. Update APPROACH.md when implementation reveals a necessary change to these decisions.
 
-Done for the agreed local delivery means the product runs locally through a shared room link, its data survives a restart, its decision rules match the product plan, and its end-to-end checks have actually passed.
+The original local delivery required a working shared room link, restart persistence, matching decision rules, and passing end-to-end checks. The next Render release additionally requires the resource, security, hosted-browser, and persistent-disk gates in the remediation spec.

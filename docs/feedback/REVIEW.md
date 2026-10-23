@@ -8,7 +8,7 @@ The visual design and basic flows are cohesive. The biggest opportunities are to
 
 ## Implementation follow-up
 
-The observations below describe the original review. All six requested improvements have now been implemented; the existing public HTTP address and port remain unchanged.
+The observations below describe the original review. All six requested improvements were implemented and verified on October 22 at the public HTTP address above. That address is historical; see the [current deployment guide](../deployment.md) and [verification record](../verification.md) for the subsequent LAN release and selected Render host. The dated evidence below remains unchanged.
 
 | Item | Delivered behavior | Verification |
 | --- | --- | --- |

@@ -1,6 +1,6 @@
 # Remembered users, preferences, and meal history
 
-Status: implemented and running at the configured LAN origin. Written and implemented October 23, 2026. See the [implementation spec](identity-and-history-tech-spec.md) and [verification record](verification.md#browser-identity-and-personal-history) for delivery details.
+Status: implemented and verified on the LAN host, October 23, 2026. Render is now the selected public host, with hosted verification still in progress. See the [implementation spec](identity-and-history-tech-spec.md) and [verification record](verification.md) for delivery details.
 
 This is a separate feature plan. It covers recognizing returning users, reusable preferences, a personal room history, and suggestions when creating a meal. The broader `next-features-plan.md` is outside this work.
 
@@ -28,7 +28,7 @@ A display name or email tells us what someone calls themselves. A browser-held s
 | **Unverified email lookup** | Type the same email to load its saved profile. No mail is sent. | Works by typing the email. | Anyone who knows the email can retrieve the same history and room links, and potentially change that profile. Not selected. An email must never silently grant control of an existing participant’s votes. |
 | **Private recovery code** | Same automatic browser flow; optionally save a generated secret once. | Paste the secret to restore the profile. | Avoids email infrastructure, but introduces credential storage, recovery, and revocation. A later option if device switching becomes important. |
 | **Private personal link / QR** | Save or scan a link that grants profile access. | Opens the profile on the other device. | Easy to confuse with the public room invite. Prefer a short-lived pairing flow if added later, rather than a permanent profile-access link. |
-| **Passkey** | Device confirmation when registering or restoring access; no typed password. | Depends on available passkey/device support. | An optional future authentication method. WebAuthn requires a secure context and is unavailable on the current public HTTP origin. [MDN WebAuthn](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API) |
+| **Passkey** | Device confirmation when registering or restoring access; no typed password. | Depends on available passkey/device support. | An optional future authentication method requiring a secure context. The selected Render HTTPS host removes the former HTTP transport obstacle, but passkeys remain outside scope. [MDN WebAuthn](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API) |
 | **Name, IP address, or browser fingerprint** | Attempts to guess who is returning. | Unreliable. | Names collide, people share networks, and device characteristics change. Do not use these as the access credential. [OWASP authentication guidance](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#adaptive-or-risk-based-authentication) |
 
 The selected option recognizes a browser, not a verified real-world person. Sharing a browser profile also shares access to its saved meals. Clearing cookies, using a private window, changing browsers, or switching the site's hostname can lose continuity. Browser cookie lifetime and removal are controlled partly by the browser. [MDN cookie guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies)
@@ -159,7 +159,7 @@ Implemented lifecycle: remembered browser access lasts 180 days of inactivity, w
 
 Personal profile/history endpoints must not expose one person’s collection through a room snapshot, a guessed profile ID, or a display-name query. A room invite still grants the existing room access only.
 
-The configured LAN address uses HTTP. Browser-held secrets on that connection are not protected against network interception; HttpOnly is not transport encryption. The plan makes no DNS or deployment change, and the existing host can support a trusted prototype, but broad use of durable personal history should include HTTPS as a separate deployment decision. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+The original LAN address uses HTTP, which does not protect browser-held secrets against network interception; HttpOnly is not transport encryption. The user subsequently selected Render HTTPS hosting. Verify its Secure cookie and exact origin behavior through the [hosted release checks](deployment.md#local-and-hosted-release-checks); the original HTTP prototype is not the public release target. [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 
 ## 8. Delivery order and acceptance
 

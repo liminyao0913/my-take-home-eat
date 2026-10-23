@@ -1,0 +1,80 @@
+{
+  "origin": "https://lets-eat-ba8e.onrender.com",
+  "initialRecoveryCommit": "9834f5e72a39f80297a3a0bc05da1fe281ee037c",
+  "configuration": {
+    "region": "virginia",
+    "plan": "1c-2g",
+    "cpu": 1,
+    "memoryBytes": 2147483648,
+    "instances": 1,
+    "autoDeployTrigger": "off",
+    "buildCommand": "npm ci --include=dev && npm run build",
+    "startCommand": "npm run start:host",
+    "healthCheckPath": "/api/health",
+    "APP_ORIGIN": "https://lets-eat-ba8e.onrender.com",
+    "DATABASE_PATH": "/var/data/lets-eat.sqlite",
+    "disk": {
+      "sizeGB": 1,
+      "mountPath": "/var/data",
+      "runtimeMountVerified": true
+    }
+  },
+  "smoke": {
+    "startedAt": "2026-10-23T18:35:04.099Z",
+    "origin": "https://lets-eat-ba8e.onrender.com",
+    "deployedCommit": "9834f5e72a39f80297a3a0bc05da1fe281ee037c",
+    "checks": {
+      "readiness": "passed",
+      "cookie": {
+        "secure": true,
+        "httpOnly": true,
+        "sameSite": "Lax"
+      },
+      "inviteClipboard": "full HTTPS invite copied",
+      "createJoinAdd": "passed with desktop and phone contexts",
+      "privatePreferencesAndSavedDefaults": "passed",
+      "sharedEarlyResult": "two approvals, same frozen winner in both contexts",
+      "mobileReload": "identity/result retained; no horizontal overflow",
+      "originIsolation": "unrelated Origin rejected",
+      "historyAndSuggestions": "passed",
+      "realDeadline": {
+        "status": "running",
+        "durationMs": 600000,
+        "deadlineAt": "2026-10-23T18:45:19.676Z",
+        "noVotes": true
+      }
+    },
+    "pageErrors": [],
+    "testRoomsCreated": 2,
+    "completedAt": "2026-10-23T18:35:20.440Z"
+  },
+  "preVersionBackup": {
+    "offHost": true,
+    "integrity": "ok",
+    "foreignKeyErrors": 0,
+    "rowCounts": {
+      "rooms": 3,
+      "participants": 5,
+      "profiles": 3
+    }
+  },
+  "localVersionChecks": {
+    "databaseIndependentVersion": "passed",
+    "versionAvailableWithUnreadyDatabase": "passed",
+    "mobileVersionLabel": "passed",
+    "localCommitFallback": "null, no fabricated revision"
+  },
+  "localReleaseChecks": {
+    "typecheck": "passed",
+    "lint": "passed",
+    "productionBuild": "passed in isolated source copy",
+    "unitPassed": 24,
+    "integrationPassed": 27,
+    "browserPassed": 23,
+    "browserSkipped": 1,
+    "browserDuration": "1.9m",
+    "blueprintValidation": "valid"
+  },
+  "hostedVersionAndRedeployCheck": "pending",
+  "capacityLoadTest": "not run on live service"
+}

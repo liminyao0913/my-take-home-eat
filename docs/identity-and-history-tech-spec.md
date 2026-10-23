@@ -1,6 +1,6 @@
 # Browser identity and history implementation
 
-Implements [the product plan](identity-and-history-plan.md), using the existing Next.js service and SQLite. The configured origin is read from `.env.local`; the user's current LAN origin is retained.
+Implements [the product plan](identity-and-history-plan.md), using the existing Next.js service and SQLite. Local configuration can use `.env.local`; the selected Render host uses dashboard environment variables and `APP_ORIGIN=https://lets-eat-ba8e.onrender.com`. Deployment status is in [verification](verification.md). The behavior below describes the implemented baseline; the [remediation spec](self-reflect-remediation-tech-spec.md) proposes changes to credential validation, cleanup, and bounded history reads.
 
 ## Storage and identity
 
@@ -49,4 +49,4 @@ Keep ordinary creation usable if personalization fails. Preserve drafts on error
 
 Use unit tests for ranking/counting/unknown data; real SQLite tests for credential expiry/replay, profile isolation, atomic/idempotent snapshots, history ordering/removal/import, and migration preservation. Browser tests cover the complete returning-user journey, a separate browser with the same name, new-round persistence, settings, reuse, network failures, expiry/forgetting, and existing room behavior. Run a production build and the release checks before completion.
 
-Back up the live SQLite file, stop the existing process before replacing `.next`, apply migrations, and verify original shared-room rows. Start the updated app using the current LAN origin and smoke-test that address with independent browser sessions. Record evidence and commit using the user's Git identity.
+For the original LAN release: back up SQLite, stop the existing process before replacing `.next`, apply migrations, and verify original shared-room rows and independent browser sessions. The next Render release follows the separate [deployment/recovery guide](deployment.md), using runtime migrations and the HTTPS origin. Record evidence and commit using the user's Git identity.

@@ -2,9 +2,9 @@
 
 This is the running decision record for Let's Eat. Keep it updated as product and technical choices are made. Detailed product behavior lives in [docs/plan.md](docs/plan.md).
 
-The current changes and rationale are in [UX review implementation](#ux-review-implementation). Earlier sections retain the original decisions and verification history.
+The current work is [self-review remediation and Render hosting](#self-review-remediation-and-render-hosting). Earlier sections retain the original decisions and verification history.
 
-The proposed next release is described in [docs/next-features-plan.md](docs/next-features-plan.md). Its recommendations extend the existing baseline; they are not implemented behavior.
+The broader brainstorming in [docs/next-features-plan.md](docs/next-features-plan.md) remains deferred. It is not the current release checklist; separately implemented features are documented in the identity/history plan.
 
 The separate [identity and history plan](docs/identity-and-history-plan.md) records the October 23 discussion about remembered users, reusable preferences, personal room history, and suggestions for new meals. Work on the broader next-features plan remains deferred.
 
@@ -18,7 +18,7 @@ The separate [identity and history plan](docs/identity-and-history-plan.md) reco
 - Favor a small first version and move to a technical spec once the product rules are clear.
 - Use SQLite, as explicitly requested.
 - Deliver a working product and verify it with end-to-end tests.
-- Run on the existing computer with SQLite; use the public address on port 3000 as subsequently requested. Managed hosting remains deferred.
+- Host publicly on Render at `https://lets-eat-ba8e.onrender.com`, using SQLite on one persistent disk. Local/LAN development remains supported; this supersedes the earlier local-only/public-IP hosting decisions.
 
 ## Original product baseline after the simplicity pass
 
@@ -198,3 +198,17 @@ The user requested a review before fixes, covering scalability, vulnerabilities,
 Fresh checks passed TypeScript, lint, 24 unit tests, 27 SQLite integration tests, and 23 regular browser scenarios. Bounded isolated HTTP runs with 20 and 100 groups of eight had no request errors; 100 simultaneous test deadlines produced the expected results. These short loopback measurements support retaining SQLite for the current LAN-first scope, not a maximum-capacity claim.
 
 The review reproduced oversized request/option admission, an in-flight vote succeeding after browser forgetting, read/health delays behind identity-cleanup write locks, stale personal history after focus, and readiness returning healthy without the profile migration. It also identifies unbounded history work, the known HTTP credential exposure boundary, one development-tool advisory, and specific documentation conflicts. Recommended fixes and acceptance checks are documented for discussion; the broader next-features plan remains deferred.
+
+## Self-review remediation and Render hosting
+
+The user requested a new branch and technical spec for fixing the self-review findings, and selected an existing Render service at `https://lets-eat-ba8e.onrender.com/`. Created `fix/self-reflect-render` from `9834f5e`. [The remediation spec](docs/self-reflect-remediation-tech-spec.md) covers F1–F8, resource budgets, bounded SQLite/history work, authorization and readiness regressions, and separate local/hosted release checks. The initial step specifies the review fixes. The user subsequently authorized repairing Render configuration and adding version information; those changes are recorded below, while the remaining review implementation follows the spec. The broader next-features plan remains deferred.
+
+Keep one Node service and SQLite on a persistent disk. Authenticated Render API/SSH inspection confirmed 1 CPU / 2 GiB RAM in Virginia. The authorized setup adds a 1 GB persistent disk at `/var/data`; the Blueprint now reflects this allocation. The workstation's 100-group result is not a hosted capacity claim. Target 20 groups of eight first, measure under the actual allocation, and scale vertically if necessary. The selected HTTPS hostname supersedes the earlier public-IP/LAN-only delivery choice; the existing local service and `.env.local` remain untouched.
+
+Direct HTTPS/browser verification reached the home page and passed all three demo outcomes. The runtime returned health 503/profile 500; a valid create request returned 403 `WRONG_ORIGIN`. The owner supplied a `no such table: profiles` log and then a failed deployment with `npm run start:host` mistakenly placed in the Build Command field. Documented separate build/start commands, runtime migration on the mounted disk, and the exact HTTPS origin. No room was created by that rejected baseline submission. After the user authorized setup, the configuration was repaired and a separate two-browser hosted smoke passed; see the continuation below.
+
+Updated README, deployment/recovery, product/core/profile specs, historical review pointers, and verification to distinguish the current Render target from earlier releases and proposed fixes. [Hosted evidence](docs/verification.md#render-baseline-and-self-review-remediation) records the observed failures and remaining cookie, multi-user, deadline, and restart gates. The standard local Playwright suite must not be pointed at Render because it changes temporary database deadlines and controls local processes; a separate low-volume external suite is specified for implementation.
+
+Operational continuation: the user supplied SSH access and authorized the Render CLI. Corrected build/start commands and environment settings through the API, attached a 1 GB disk, configured `/api/health`, and disabled automatic deploys. Kept the existing Virginia 1 CPU / 2 GiB instance and linked `master` branch. The original empty database was backed up off-host. Deployment of `9834f5e` succeeded, all three migrations ran, and the disk mount/integrity were verified. The hosted desktop/phone smoke then passed creation through early result, saved defaults, history, suggestions, HTTPS clipboard, secure cookies, and Origin protection. A real ten-minute no-vote room is running separately.
+
+The user also requested version information. Added a shared-header version link and an uncached, database-independent `/api/version` response with package version and full Render commit; a local run without commit metadata reports `null`. Typecheck, lint, 24 unit, 27 integration, the isolated production build, 23 regular browser cases, and targeted version/mobile checks pass. Saved a consistent off-host backup before deploying this feature; hosted revision/persistence checks follow. These small changes do not implement the remaining self-review remediations.

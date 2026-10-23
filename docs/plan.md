@@ -2,7 +2,7 @@
 
 Status: product baseline updated for the [UX review](feedback/REVIEW.md), including early completion, repeat rounds, simpler setup, and an instant demo. Implementation choices are in [the technical spec](tech-spec.md).
 
-The next round of brainstorming is in [the next feature plan](next-features-plan.md): ZIP-based restaurant discovery, concurrent groups, result popups, room copying, and reusable preferences. That proposal keeps meals soon as the main flow and drops email notifications; the v1 baseline below describes the existing product.
+The implemented [identity/history extension](identity-and-history-plan.md) adds browser profiles, reusable cuisine/budget defaults, personal history, and suggestions. The broader [next feature plan](next-features-plan.md) remains deferred; its brainstorming is not the current delivery checklist. The next work is [self-review remediation for Render](self-reflect-remediation-tech-spec.md), preserving the meal decision rules below.
 
 ## 1. Product and audience
 
@@ -109,11 +109,11 @@ Anyone can add an option containing:
 
 Unspecified cuisine and price remain unknown and earn no confirmed match for a supplied preference in that dimension. “Other” is a valid cuisine tag. Entry is manual; no restaurant lookup is required.
 
-Once submitted, option details are fixed. Before the deadline, the author can remove their own option and add a corrected one. Removing it discards its votes and flags; a replacement starts fresh. This avoids editing a meal that people have already approved. Encourage three to five options without adding caps or duplicate-detection workflows.
+Once submitted, option details are fixed. Before the deadline, the author can remove their own option and add a corrected one. Removing it discards its votes and flags; a replacement starts fresh. This avoids editing a meal that people have already approved. Encourage three to five options. The original implementation has no option cap; the remediation spec proposes resource limits for public hosting. Duplicate detection remains deferred.
 
 ### Personal preferences
 
-All three inputs are optional and apply only to this room. Blank fields, including an empty cuisine selection, are unanswered:
+All three scoring inputs are optional and belong to this room. Users can explicitly save cuisine/budget as browser defaults and copy them into future rooms; time windows stay meal-specific. Updating defaults does not change existing rooms. Blank fields, including an empty cuisine selection, are unanswered:
 
 | Preference | Match rule |
 | --- | --- |
@@ -162,7 +162,7 @@ At the deadline there is no quorum. Use the inputs received, without assuming th
 
 Each round has **two states: Open and Closed**. A closed round has either a winner or a no-winner explanation. A participant can start a new round on the same link, with new options and a fresh ten-minute deadline. Old results remain frozen in history. Stale requests from a previous round are rejected.
 
-Defer configurable timers, full meal-duration scheduling, multi-date polls, automatic dietary checks, fairness weights, random tie-breaks, saved profiles, restaurant discovery, travel estimates, reminders, chat, reservations, and payments.
+Defer configurable timers, full meal-duration scheduling, multi-date polls, automatic dietary checks, fairness weights, random tie-breaks, restaurant discovery, travel estimates, reminders, chat, reservations, and payments. Saved browser profiles/history are implemented in the separate extension; verified accounts and cross-device recovery remain deferred.
 
 Before implementation is considered complete, verify:
 

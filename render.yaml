@@ -2,18 +2,21 @@ services:
   - type: web
     name: lets-eat
     runtime: node
-    region: oregon
-    plan: 0.5c-512mb
+    region: virginia
+    plan: 1c-2g
+    branch: master
     numInstances: 1
     autoDeployTrigger: "off"
     buildCommand: npm ci --include=dev && npm run build
-    startCommand: APP_ORIGIN="${APP_ORIGIN:-$RENDER_EXTERNAL_URL}" npm run start:host
+    startCommand: npm run start:host
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: 24.22.1
       - key: DATABASE_PATH
         value: /var/data/lets-eat.sqlite
+      - key: APP_ORIGIN
+        value: https://lets-eat-ba8e.onrender.com
     disk:
       name: lets-eat-data
       mountPath: /var/data

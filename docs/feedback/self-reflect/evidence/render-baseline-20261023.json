@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-23T18:22:55.093Z",
+  "origin": "https://lets-eat-ba8e.onrender.com",
+  "sourceCommit": "9834f5e",
+  "deployedCommitVerified": false,
+  "checks": {
+    "/api/health": {
+      "status": 503,
+      "body": {
+        "status": "unavailable"
+      }
+    },
+    "/api/profile": {
+      "status": 500,
+      "body": {
+        "code": "SERVER_ERROR",
+        "message": "Something went wrong. Please try again."
+      }
+    },
+    "home": {
+      "status": 200,
+      "title": "Let's Eat — less debating, more eating",
+      "createVisible": true
+    },
+    "demo": {
+      "voteResult": "passed",
+      "preferenceResult": "passed",
+      "allExcludedResult": "passed",
+      "roomApiRequests": 0
+    },
+    "create": {
+      "status": 403,
+      "body": {
+        "code": "WRONG_ORIGIN",
+        "message": "Open this room on its original site before making changes."
+      },
+      "visibleError": "Open this room on its original site before making changes.",
+      "nameDraftPreserved": true,
+      "placeDraftPreserved": true
+    },
+    "mobile": {
+      "route": "/me",
+      "horizontalOverflow": false,
+      "text": "REMEMBERED IN THIS BROWSER\nMy meals\n\nYour tables, your preferences, and ideas worth proposing again.\n\nCreate a meal room\nRemembered details could not load. Something went wrong. Please try again. Retry remembered details"
+    }
+  },
+  "browserErrors": [],
+  "cookiesSet": [],
+  "httpEntry": {
+    "status": 301,
+    "redirect": "https://lets-eat-ba8e.onrender.com/",
+    "method": "curl without following redirect"
+  },
+  "ownerSuppliedLogs": {
+    "runtimeDatabaseError": "SqliteError: no such table: profiles",
+    "failedDeployCommit": "9834f5e72a39f80297a3a0bc05da1fe281ee037c",
+    "failedDeployBranch": "master",
+    "incorrectBuildCommand": "npm run start:host",
+    "failedDeployError": "Could not find a production build in the .next directory"
+  },
+  "limits": [
+    "Actual Render compute/disk settings not inspected.",
+    "Source commit is the local baseline; serving deployment commit is not independently verified.",
+    "Create was rejected; cookie, multi-user, deadline, and restart durability are not verified.",
+    "No live load, race, database-edit, or restore probes were performed."
+  ]
+}

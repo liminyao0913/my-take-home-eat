@@ -4,6 +4,8 @@ A shared meal decision room for a small group. The product and implementation ar
 
 Browser continuity, saved preferences, personal history, and meal suggestions are described in the [identity/history plan](docs/identity-and-history-plan.md) and [implementation spec](docs/identity-and-history-tech-spec.md).
 
+The [self-review remediation spec](docs/self-reflect-remediation-tech-spec.md) covers the next security, scalability, and reliability fixes for Render. Those fixes are proposed; see [verification](docs/verification.md#render-baseline-and-self-review-remediation) for the current hosted results.
+
 ## Run locally
 
 Use Node.js 24 (the pinned version is in .node-version), then:
@@ -25,7 +27,7 @@ npm run db:migrate
 npm run start
 ```
 
-The health endpoint is /api/health. Apply migrations before starting the app.
+The health endpoint is /api/health. Apply migrations before starting the app. The header links to `/api/version`, which returns the package version and deployed Git commit without requiring the database. The commit is `null` when `RENDER_GIT_COMMIT` is unavailable, as in a normal local run.
 
 ### Open it from another computer
 
@@ -65,13 +67,24 @@ Browser tests start a production server on port 3100 and use a fresh temporary S
 
 Use `npm run test:e2e:release` to include an actual ten-minute round. Open `playwright-report/index.html` for the report. The [GitHub workflow](.github/workflows/verify.yml) runs the checks on pushes and pull requests and retains browser evidence.
 
+These tests control local processes and temporary databases. Do not redirect the whole suite to Render. The [deployment guide](docs/deployment.md#local-and-hosted-release-checks) describes low-volume hosted checks; a separate automated hosted suite is planned in the remediation spec.
+
 ## Deploy
 
-LAN access is our preferred deployment option. The existing computer serves the app at [http://192.168.86.52:3000](http://192.168.86.52:3000), with local SQLite storage and `APP_ORIGIN=http://192.168.86.52:3000` in the ignored `.env.local`.
+Render is now the selected public host: [https://lets-eat-ba8e.onrender.com/](https://lets-eat-ba8e.onrender.com/). The missing-schema and Origin configuration errors were repaired, and a two-browser hosted meal flow passed. See [verification](docs/verification.md#render-baseline-and-self-review-remediation) for release evidence and remaining hardening work. The existing service uses:
 
-If access from outside the LAN is needed, we can try a publicly accessible address on the same computer, still using port 3000. Set `APP_ORIGIN` to that exact public URL and restart the service before sharing it.
+| Render setting | Value |
+| --- | --- |
+| Build Command | `npm ci --include=dev && npm run build` |
+| Start Command | `npm run start:host` |
+| `APP_ORIGIN` | `https://lets-eat-ba8e.onrender.com` |
+| `DATABASE_PATH` | `/var/data/lets-eat.sqlite` |
+| Persistent disk mount | `/var/data` |
+| Health Check Path | `/api/health` |
 
-Managed hosting remains deferred. For a future Render deployment, use the [Render configuration](render.yaml) and [deployment/recovery guide](docs/deployment.md). Render deployment requires a connected Render workspace, a source repository, and a paid persistent disk. Keep one app instance and apply migrations at runtime through `npm run start:host`.
+Keep one instance. The [Render configuration](render.yaml) matches the configured Virginia service: 1 CPU / 2 GiB RAM and a 1 GB persistent disk, with manual deployments. A manually created service does not automatically inherit that file. Build and Start are separate fields; migrations run during startup. Set environment values in Render, without uploading `.env.local`.
+
+Local/LAN development remains supported. The existing LAN service uses [http://192.168.86.52:3000](http://192.168.86.52:3000) and a separate local SQLite file. Its data and browser identities do not automatically move to the Render hostname.
 
 ## Database changes and backups
 
