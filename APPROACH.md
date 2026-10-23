@@ -12,7 +12,7 @@ This is the running decision record for Let's Eat. Keep it updated as product an
 - Favor a small first version and move to a technical spec once the product rules are clear.
 - Use SQLite, as explicitly requested.
 - Deliver a working product and verify it with end-to-end tests.
-- Finish with a locally running, tested app; public hosting is deferred at the user's request.
+- Run on the existing computer with SQLite; use the public address on port 3000 as subsequently requested. Managed hosting remains deferred.
 
 ## Product baseline after the simplicity pass
 
@@ -53,7 +53,7 @@ The implementation details and verification gates are in [docs/tech-spec.md](doc
 | Tailwind CSS with semantic HTML and ordinary React state. | Keeps the small interface accessible without adding a component or global state framework. |
 | SQLite through Drizzle and better-sqlite3. | Honors the database choice, provides migrations and typed queries, and needs no database server. |
 | One Node.js 24 app with a local persistent database file. | Fits SQLite's storage model; run one service instance and keep transactions short. |
-| Local delivery now; retain Render with a persistent disk as a future deployment option. | The user chose local delivery. The prepared configuration keeps the SQLite file across restarts if hosting is later requested. |
+| Use the existing computer with public access on port 3000; retain Render with a persistent disk as a future deployment option. | The user initially chose local delivery, then supplied the public address for that computer. The prepared Render configuration remains available for future managed hosting. |
 | A random HttpOnly guest cookie, with only its hash stored per room participant. | Supports identity and ownership without accounts; the shared link is distinct from the participant credential. |
 | Poll the room every three seconds while visible and open. | Sufficient for small groups; avoids maintaining live connections. |
 | Enforce the persisted deadline on the server; save the result on the first request after expiry. | No worker or browser timer is required. Closure is effective at the deadline even when snapshot materialization happens later. |
@@ -82,7 +82,7 @@ The final production build passed, then the expanded regular browser suite passe
 
 The Render Blueprint validates against its official schema. Its startup command was exercised locally against a fresh database: migrations, readiness, origin handling, and room creation passed. CI configuration is provided; no remote CI run is claimed.
 
-The user chose local delivery when asked about the deployment repository. Public deployment is deferred and is no longer a completion requirement for this implementation. Future deployment configuration and recovery instructions remain in `render.yaml` and `docs/deployment.md`. No remote, paid resources, or public deployment have been created.
+The user initially chose local delivery when asked about the deployment repository. Managed hosting is deferred and is no longer a completion requirement for this implementation. Future deployment configuration and recovery instructions remain in `render.yaml` and `docs/deployment.md`. No remote or paid resources have been created; subsequent public access uses the existing computer, as recorded below.
 
 Local delivery is complete. The production server was started at `http://localhost:3000` using `npm run start:host`, with the database at `.data/lets-eat.sqlite`. Detailed commands and evidence are in [docs/verification.md](docs/verification.md). Every repository commit uses the user's configured author and committer identity, Limin Yao <isabel0913@gmail.com>.
 
@@ -93,3 +93,9 @@ Opening the app from another computer exposed a configuration mismatch: without 
 Set the local `APP_ORIGIN` to the user's browser-facing LAN URL and restarted the production server. Keep that machine-specific setting in the ignored `.env.local`; use the same URL in all browsers. The origin check and application code are unchanged. README and `.env.example` now explain the network configuration and restart requirement.
 
 Verified the original form failure, then successful creation, joining from a separate browser, and vote propagation at the LAN address. An unrelated origin still receives 403. Removed only the temporary test room after verification; existing rooms were preserved.
+
+## Public address on the existing computer
+
+The user supplied `http://24.130.34.221` and clarified that the app should keep port 3000. The canonical address is therefore `http://24.130.34.221:3000`. Set `APP_ORIGIN` to that exact URL in the ignored `.env.local` and restarted the production server, still bound to all interfaces on port 3000 with the same SQLite database. Participants should use this address in their browsers and invite links.
+
+Confirmed that the public URL reaches the app and reproduced `403 WRONG_ORIGIN` before updating the setting. After restarting, Playwright verified room creation, an invite link containing the public address and port, joining and vote propagation across separate browser sessions, and saved preferences and guest identity after reload. The HTTP copy fallback exposes the correct invite URL. Unrelated origins still receive 403. These checks ran from the app host through its public address; only the temporary verification room was removed afterward.

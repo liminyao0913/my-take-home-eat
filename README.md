@@ -27,9 +27,9 @@ The health endpoint is /api/health. Apply migrations before starting the app.
 
 ### Open it from another computer
 
-Set `APP_ORIGIN` in `.env.local` to the address people will open, including its port, for example `http://192.168.1.10:3000`. Restart the app after changing it. Use that same address in every browser, including on the computer running the app.
+Set `APP_ORIGIN` in `.env.local` to the LAN or public address people will open, including its port, for example `http://192.168.1.10:3000`. Restart the app after changing it. Use that same address in every browser, including on the computer running the app.
 
-For a production build, `npm run start:host` binds to all network interfaces. Share the LAN URL with people on the same network. If the browser address differs from `APP_ORIGIN`, writes are rejected with “Open this room on its original site before making changes.”
+For a production build, `npm run start:host` binds to all network interfaces on port 3000. Share the configured URL with participants. If the browser address differs from `APP_ORIGIN`, writes are rejected with “Open this room on its original site before making changes.”
 
 ## Use it
 
@@ -55,7 +55,7 @@ Use `npm run test:e2e:release` to include an actual ten-minute round. Open `play
 
 ## Deploy
 
-The current delivery is local; public hosting is deferred. For a future deployment, use the [Render configuration](render.yaml) and [deployment/recovery guide](docs/deployment.md). Deployment requires a connected Render workspace, a source repository, and a paid persistent disk. Keep one app instance and apply migrations at runtime through `npm run start:host`.
+The existing computer serves the app at [http://24.130.34.221:3000](http://24.130.34.221:3000), with local SQLite storage and `APP_ORIGIN=http://24.130.34.221:3000` in its ignored `.env.local`. Managed hosting remains deferred. For a future Render deployment, use the [Render configuration](render.yaml) and [deployment/recovery guide](docs/deployment.md). Render deployment requires a connected Render workspace, a source repository, and a paid persistent disk. Keep one app instance and apply migrations at runtime through `npm run start:host`.
 
 ## Database changes and backups
 

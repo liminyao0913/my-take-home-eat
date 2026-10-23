@@ -1,6 +1,6 @@
-# Local verification
+# Verification
 
-Verified on October 22, 2026 using Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.4, and Playwright Chromium. Public hosting is deferred at the user's request.
+Verified on October 22, 2026 using Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.4, and Playwright Chromium. The existing computer now serves the app through its public address on port 3000; managed hosting remains deferred.
 
 | Check | Outcome |
 | --- | --- |
@@ -15,6 +15,7 @@ Verified on October 22, 2026 using Node.js 24.22.1, Next.js 16.4.2, SQLite 3.53.
 | Deployment startup command | Applied migrations to a fresh local database, passed readiness, and accepted room creation using the configured origin. |
 | Render Blueprint | Validated against Render's official JSON Schema. No deployment performed. |
 | LAN access configuration | Reproduced the localhost/LAN origin mismatch, set the browser-facing origin, and verified room creation, joining, and voting through the LAN address. Unrelated origins still receive 403. |
+| Public address configuration | Set `APP_ORIGIN=http://24.130.34.221:3000` and restarted the app on port 3000. Playwright on the app host verified creation, the public invite URL and HTTP copy fallback, joining, vote propagation, and identity/preferences after reload through that URL. Unrelated origins still receive 403. Removed only the temporary verification room. |
 
 The full-duration browser test used two isolated browser sessions, retained the original ten-minute deadline, and confirmed that the saved closing time equals that deadline. It did not alter the database deadline or mock the clock. Routine browser cases accelerate only their own room in an isolated test SQLite file; the application has no deadline-changing endpoint.
 
