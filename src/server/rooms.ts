@@ -3,14 +3,15 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
 import { and, asc, desc, eq } from "drizzle-orm";
 import {
-  BLOCK_REASONS, createRoomInput, joinInput, optionInput, preferencesInput, readyInput, responseInput, roundInput, ROUND_MS,
+  BLOCK_REASONS, createRoomInput, joinInput, optionInput, roomPreferencesInput, readyInput, responseInput, roundInput, ROUND_MS,
   type MealOption, type OptionInput, type Preferences, type RoomSnapshot,
 } from "@/lib/contracts";
 import { decide } from "@/lib/decision";
 import { minuteOfDay, minuteToTime, toInstant } from "@/lib/time";
 import type { Database } from "./db";
 import { ApiError, parseInput } from "./errors";
-import { options, participants, responses, roomRounds, rooms } from "./schema";
+import { options, participants, profileRooms, responses, roomRounds, rooms } from "./schema";
+import { capturePersonalRound, ensureProfile, linkProfileRoom, saveDefaults } from "./profile-store";
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Query = Database | Transaction;
@@ -86,6 +87,7 @@ function finalize(db: Query, room: Room, now: number, early = false): Room {
     deadlineAt: early ? now : room.deadlineAt, timeZone: room.timeZone,
   }), closedEarly: early };
   db.update(rooms).set({ result, resolvedAt: now }).where(eq(rooms.id, room.id)).run();
+  capturePersonalRound(db, room, result, now);
   return { ...room, result, resolvedAt: now };
 }
 
@@ -122,8 +124,10 @@ export class RoomService {
       const room = { id, title: input.title, area: input.area, mealDate: input.mealDate, timeZone: input.timeZone, createdAt: now, deadlineAt: now + ROUND_MS };
       const meals = input.options.map((o, i) => ({ ...optionValues(o, room, `options.${i}.startTime`), roomId: id, authorId: personId, createdAt: now }));
       tx.insert(rooms).values(room).run();
-      tx.insert(participants).values({ id: personId, roomId: id, tokenHash, displayName: input.displayName, createdAt: now }).run();
+      tx.insert(participants).values({ id: personId, roomId: id, tokenHash, displayName: input.displayName, createdAt: now, ...input.preferences }).run();
       if (meals.length) tx.insert(options).values(meals).run();
+      const profile = ensureProfile(tx, tokenHash, input.displayName, now);
+      linkProfileRoom(tx, profile.id, id, personId, "created");
       return { id, path: `/r/${id}` };
     }, { behavior: "immediate" });
   }
@@ -164,19 +168,29 @@ export class RoomService {
     const input = parseInput(joinInput, value);
     this.mutate(roomId, (tx, room, now) => {
       const existing = tx.select().from(participants).where(and(eq(participants.roomId, room.id), eq(participants.tokenHash, tokenHash))).get();
-      if (existing?.active) return;
-      if (existing) tx.update(participants).set({ active: true, ready: false, displayName: input.displayName }).where(eq(participants.id, existing.id)).run();
-      else tx.insert(participants).values({ id: randomUUID(), roomId, tokenHash, displayName: input.displayName, createdAt: now }).run();
+      const personId = existing?.id ?? randomUUID();
+      if (!existing?.active) {
+        if (existing) tx.update(participants).set({ active: true, ready: false, displayName: input.displayName, ...input.preferences }).where(eq(participants.id, existing.id)).run();
+        else tx.insert(participants).values({ id: personId, roomId, tokenHash, displayName: input.displayName, createdAt: now, ...input.preferences }).run();
+      }
+      const profile = ensureProfile(tx, tokenHash, input.displayName, now);
+      linkProfileRoom(tx, profile.id, roomId, personId, "joined");
     });
   }
 
   savePreferences(roomId: string, tokenHash: string | null, value: unknown) {
-    const input = parseInput(preferencesInput, value);
-    this.mutate(roomId, (tx) => {
+    const input = parseInput(roomPreferencesInput, value);
+    this.mutate(roomId, (tx, room, now) => {
       const person = getParticipant(tx, roomId, tokenHash);
       tx.update(participants).set({ ready: false, cuisines: input.cuisines, maxPriceLevel: input.maxPriceLevel,
         preferredStartMinute: input.startTime === null ? null : minuteOfDay(input.startTime), preferredEndMinute: input.endTime === null ? null : minuteOfDay(input.endTime),
       }).where(eq(participants.id, person.id)).run();
+      if (input.remember) {
+        const profile = ensureProfile(tx, tokenHash!, person.displayName, now);
+        saveDefaults(tx, profile.id, input);
+        // Saving defaults is explicit opt-in, but must not restore a hidden history entry.
+        tx.insert(profileRooms).values({ profileId: profile.id, roomId: room.id, participantId: person.id, role: "joined" }).onConflictDoNothing().run();
+      }
     });
   }
 

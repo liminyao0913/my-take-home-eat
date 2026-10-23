@@ -31,6 +31,9 @@ it("upgrades the original schema without losing votes, identities, frozen result
     expect(database.sqlite.prepare("SELECT result_json, round FROM rooms").get()).toEqual({ result_json: result, round: 1 });
     expect(database.sqlite.prepare("SELECT token_hash, cuisines_json, ready FROM participants").get()).toEqual({ token_hash: "identity-hash", cuisines_json: '["Thai"]', ready: 0 });
     expect(database.sqlite.prepare("SELECT * FROM responses").all()).toEqual([{ participant_id: "person", option_id: 1, choice: "approve", reason: null }]);
+    expect(database.sqlite.prepare("SELECT token_hash, profile_id, legacy_available FROM browser_credentials").all()).toEqual([{ token_hash: "identity-hash", profile_id: null, legacy_available: 1 }]);
+    expect(database.sqlite.prepare("SELECT * FROM profiles").all()).toEqual([]);
+    expect(database.sqlite.prepare("SELECT * FROM profile_rooms").all()).toEqual([]);
     const inserted = database.sqlite.prepare("INSERT INTO options (room_id, author_id, place_name, location, start_at, cuisine, price_level, created_at) VALUES ('room', 'person', 'New idea', '', 5000, NULL, NULL, 1000)").run();
     expect(inserted.lastInsertRowid).toBe(101);
     expect(database.sqlite.pragma("foreign_keys", { simple: true })).toBe(1);

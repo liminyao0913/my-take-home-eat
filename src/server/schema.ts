@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import type { BlockReason, Choice, DecisionResult } from "../lib/contracts";
+import type { BlockReason, Choice, DecisionResult, MealSignal } from "../lib/contracts";
 
 export const rooms = sqliteTable("rooms", {
   id: text("id").primaryKey(),
@@ -66,3 +66,35 @@ export const roomRounds = sqliteTable("room_rounds", {
   mealDate: text("meal_date").notNull(),
   result: text("result_json", { mode: "json" }).$type<DecisionResult>().notNull(),
 }, (table) => [primaryKey({ columns: [table.roomId, table.round] })]);
+
+export const profiles = sqliteTable("profiles", {
+  id: text("id").primaryKey(),
+  displayName: text("display_name").notNull(),
+  cuisines: text("cuisines_json", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+  maxPriceLevel: integer("max_price_level"),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [check("profile_price", sql`${table.maxPriceLevel} IS NULL OR ${table.maxPriceLevel} BETWEEN 1 AND 3`)]);
+
+export const browserCredentials = sqliteTable("browser_credentials", {
+  tokenHash: text("token_hash").primaryKey(),
+  profileId: text("profile_id").references(() => profiles.id, { onDelete: "set null" }),
+  expiresAt: integer("expires_at").notNull(),
+  legacyAvailable: integer("legacy_available", { mode: "boolean" }).notNull().default(false),
+}, (table) => [uniqueIndex("credential_profile").on(table.profileId), index("credential_expiry").on(table.expiresAt)]);
+
+export const profileRooms = sqliteTable("profile_rooms", {
+  profileId: text("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  roomId: text("room_id").notNull().references(() => rooms.id, { onDelete: "cascade" }),
+  participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+  role: text("role").$type<"created" | "joined">().notNull(),
+  hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
+}, (table) => [primaryKey({ columns: [table.profileId, table.roomId] }), index("profile_room_lookup").on(table.roomId)]);
+
+export const profileRounds = sqliteTable("profile_rounds", {
+  profileId: text("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  roomId: text("room_id").notNull().references(() => rooms.id, { onDelete: "cascade" }),
+  round: integer("round").notNull(),
+  closedAt: integer("closed_at").notNull(),
+  area: text("area").notNull(),
+  signals: text("signals_json", { mode: "json" }).$type<MealSignal[]>().notNull(),
+}, (table) => [primaryKey({ columns: [table.profileId, table.roomId, table.round] }), index("personal_round_recency").on(table.profileId, table.closedAt)]);

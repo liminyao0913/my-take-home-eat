@@ -166,3 +166,15 @@ The proposed product adds remembered cuisine/budget defaults, a personal **My me
 The plan also defines forgetting a browser, removing a room from personal history, empty-history behavior, and a migration boundary: existing round archives contain aggregate results, so missing individual votes must not be invented. Future personal recommendation records must be captured before another round deletes its old options/responses. SQLite remains the storage choice. The plan compares other identity options and notes the current HTTP transport limitation without changing hosting.
 
 This step creates documentation only. The identity/profile implementation and technical spec remain future work; [docs/identity-and-history-plan.md](docs/identity-and-history-plan.md) contains the proposed flows, ranking rules, staged delivery, and acceptance checks.
+
+## Implementing browser identity and history
+
+The user authorized implementation of the separate identity/history plan and changed `APP_ORIGIN` to the LAN address `http://192.168.86.52:3000`. Preserve that setting and use it for release checks. The broader next-features plan remains deferred.
+
+[The implementation spec](docs/identity-and-history-tech-spec.md) defines four additional SQLite tables: browser profiles, hashed credentials, personal room membership, and per-round recommendation signals. Existing guest cookies can adopt legacy memberships explicitly; names and emails never link profiles. Expired/forgotten credentials remain revoked through minimal hash records, preventing old participant records from silently recreating personal access.
+
+Defaults contain name, cuisine, and budget. Saving room preferences changes defaults only when explicitly requested. Creation/joining copies the selected cuisine/budget into that meal without carrying a time window. Personal history removal and forgetting do not alter shared room contributions or frozen results.
+
+Finalization captures each active profile's submitted approvals and approved group picks in the same transaction as the room result, before another round can remove live responses. Recommendations rank current preferences, distinct approval/group-pick rounds, and recency; they do not infer visits or fabricate missing legacy votes. Unknown metadata earns no confirmed preference match. Empty participation rounds count toward the latest-20 history window.
+
+Backend milestone: 24 unit tests and 27 real-SQLite integration tests pass. Coverage includes profile isolation, explicit defaults, atomic capture/rollback, round/restart persistence, pagination, removal, forgetting, expiry, credential replay, and one-time legacy adoption. The populated migration test confirms existing shared data is retained without creating profiles or importing history automatically. UI and release verification are next.
