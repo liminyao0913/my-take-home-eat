@@ -6,7 +6,7 @@ import { toInstant } from "@/lib/time";
 const blank = preferencesInput.parse({});
 const meal = (id: number, changes: Partial<MealOption> = {}): MealOption => ({
   id, authorId: "one", placeName: `Meal ${id}`, location: "Main St", cuisine: "Thai", priceLevel: 2,
-  startAt: toInstant("2027-06-01", "12:30", "UTC"), link: null, approvalCount: 0, blockCount: 0, ...changes,
+  startAt: toInstant("2027-06-01", "12:30", "UTC"), link: null, approvalCount: 0, blockCount: 0, blockReasons: [], ...changes,
 });
 const choose = (options: MealOption[], preferences: Preferences[] = []) => decide({ options, preferences, participantCount: Math.max(3, preferences.length), voterCount: 2, timeZone: "UTC", deadlineAt: 123 });
 
@@ -59,6 +59,11 @@ describe("decision order", () => {
 });
 
 describe("preference dimensions", () => {
+  it("does not treat unspecified price or cuisine as a confirmed preference match", () => {
+    const option = meal(1, { cuisine: null, priceLevel: null });
+    expect(preferenceUnits(option, { ...blank, cuisines: ["Thai"], maxPriceLevel: 1 }, "UTC")).toBe(0);
+    expect(preferenceUnits(option, { ...blank, maxPriceLevel: 1, startTime: "12:00", endTime: "13:00" }, "UTC")).toBe(3);
+  });
   it("uses inclusive price and room-local time boundaries", () => {
     const option = meal(1, { startAt: toInstant("2027-06-01", "12:30", "America/Los_Angeles") });
     expect(preferenceUnits(option, { ...blank, maxPriceLevel: 2, startTime: "12:30", endTime: "12:30" }, "America/Los_Angeles")).toBe(6);

@@ -19,7 +19,7 @@ export function useRoom(roomId: string) {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (pending.current || controller.current || current.current?.state === "closed") return;
+    if (pending.current || controller.current) return;
     const abort = new AbortController();
     const version = generation.current;
     controller.current = abort;
@@ -48,9 +48,9 @@ export function useRoom(roomId: string) {
     if (pending.current) throw new RequestError({ code: "PENDING", message: "Wait for your previous change to finish." });
     pending.current = true; setBusy(true); generation.current++;
     controller.current?.abort(); controller.current = null;
-    try { accept(await request<RoomSnapshot>(`${base}${suffix}`, method, value)); }
+    try { accept(await request<RoomSnapshot>(`${base}${suffix}`, method, value, undefined, current.current?.room.round)); }
     catch (error) {
-      if (error instanceof RequestError && error.details.code === "ROOM_CLOSED") { pending.current = false; await refresh(); }
+      if (error instanceof RequestError && ["ROOM_CLOSED", "STALE_ROUND", "NOT_READY"].includes(error.details.code)) { pending.current = false; await refresh(); }
       throw error;
     } finally { pending.current = false; setBusy(false); }
   }, [accept, base, refresh]);

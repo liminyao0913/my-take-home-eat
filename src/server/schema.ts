@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import type { Choice, DecisionResult } from "../lib/contracts";
+import type { BlockReason, Choice, DecisionResult } from "../lib/contracts";
 
 export const rooms = sqliteTable("rooms", {
   id: text("id").primaryKey(),
@@ -10,6 +10,7 @@ export const rooms = sqliteTable("rooms", {
   timeZone: text("time_zone").notNull(),
   createdAt: integer("created_at").notNull(),
   deadlineAt: integer("deadline_at").notNull(),
+  round: integer("round").notNull().default(1),
   result: text("result_json", { mode: "json" }).$type<DecisionResult>(),
   resolvedAt: integer("resolved_at"),
 });
@@ -20,6 +21,7 @@ export const participants = sqliteTable("participants", {
   tokenHash: text("token_hash").notNull(),
   displayName: text("display_name").notNull(),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
+  ready: integer("ready", { mode: "boolean" }).notNull().default(false),
   cuisines: text("cuisines_json", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
   maxPriceLevel: integer("max_price_level"),
   preferredStartMinute: integer("preferred_start_minute"),
@@ -38,8 +40,8 @@ export const options = sqliteTable("options", {
   placeName: text("place_name").notNull(),
   location: text("location").notNull(),
   startAt: integer("start_at").notNull(),
-  cuisine: text("cuisine").notNull(),
-  priceLevel: integer("price_level").notNull(),
+  cuisine: text("cuisine"),
+  priceLevel: integer("price_level"),
   link: text("link"),
   createdAt: integer("created_at").notNull(),
 }, (table) => [
@@ -51,8 +53,16 @@ export const responses = sqliteTable("responses", {
   participantId: text("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
   optionId: integer("option_id").notNull().references(() => options.id, { onDelete: "cascade" }),
   choice: text("choice").$type<Choice>().notNull(),
+  reason: text("reason").$type<BlockReason>(),
 }, (table) => [
   primaryKey({ columns: [table.participantId, table.optionId] }),
   index("response_option").on(table.optionId),
   check("response_choice", sql`${table.choice} IN ('approve', 'block')`),
 ]);
+
+export const roomRounds = sqliteTable("room_rounds", {
+  roomId: text("room_id").notNull().references(() => rooms.id, { onDelete: "cascade" }),
+  round: integer("round").notNull(),
+  mealDate: text("meal_date").notNull(),
+  result: text("result_json", { mode: "json" }).$type<DecisionResult>().notNull(),
+}, (table) => [primaryKey({ columns: [table.roomId, table.round] })]);

@@ -7,7 +7,7 @@ export async function PUT(request: NextRequest, context: RoomContext) {
   return handle(request, async () => {
     const { roomId } = await context.params;
     const hash = identity(request).hash;
-    const service = roomService();
+    const service = roomService(request);
     service.savePreferences(roomId, hash, await body(request));
     return json(service.get(roomId, hash));
   });

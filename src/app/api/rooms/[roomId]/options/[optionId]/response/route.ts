@@ -7,7 +7,7 @@ export async function PUT(request: NextRequest, context: OptionContext) {
   return handle(request, async () => {
     const params = await context.params;
     const hash = identity(request).hash;
-    const service = roomService();
+    const service = roomService(request);
     service.respond(params.roomId, hash, optionId(params.optionId), await body(request));
     return json(service.get(params.roomId, hash));
   });

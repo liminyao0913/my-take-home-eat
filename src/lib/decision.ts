@@ -3,8 +3,8 @@ import { localMinute, minuteOfDay } from "./time";
 
 export function preferenceUnits(option: MealOption, preference: Preferences, timeZone: string): number | null {
   const matches: boolean[] = [];
-  if (preference.cuisines.length) matches.push(preference.cuisines.includes(option.cuisine as Preferences["cuisines"][number]));
-  if (preference.maxPriceLevel !== null) matches.push(option.priceLevel <= preference.maxPriceLevel);
+  if (preference.cuisines.length) matches.push(option.cuisine !== null && preference.cuisines.includes(option.cuisine as Preferences["cuisines"][number]));
+  if (preference.maxPriceLevel !== null) matches.push(option.priceLevel !== null && option.priceLevel <= preference.maxPriceLevel);
   if (preference.startTime !== null && preference.endTime !== null) {
     const minute = localMinute(option.startAt, timeZone);
     matches.push(minute >= minuteOfDay(preference.startTime) && minute <= minuteOfDay(preference.endTime));
@@ -23,7 +23,7 @@ export function decide(input: {
   })).sort((a, b) => b.option.approvalCount - a.option.approvalCount || b.units - a.units || a.option.id - b.option.id);
   const first = ranked[0];
   let basis: DecisionResult["basis"] = "no-options";
-  let message = input.options.length ? "Every option has a ‘Can't do this’ response. Start a new room with some different ideas." : "No meal options remain. Start a new room to try again.";
+  let message = input.options.length ? "Every option has a ‘Can't do this’ response. Start another round here with some different ideas." : "No meal options remain. Start another round here to try again.";
   if (first) {
     const voteTied = ranked.filter((r) => r.option.approvalCount === first.option.approvalCount);
     const scoreTied = voteTied.filter((r) => r.units === first.units);

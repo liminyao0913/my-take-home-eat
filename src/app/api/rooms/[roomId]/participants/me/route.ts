@@ -7,7 +7,7 @@ export async function DELETE(request: NextRequest, context: RoomContext) {
   return handle(request, async () => {
     const { roomId } = await context.params;
     const hash = identity(request).hash;
-    const service = roomService();
+    const service = roomService(request);
     service.leave(roomId, hash);
     return json(service.get(roomId, hash));
   });

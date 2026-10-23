@@ -4,10 +4,10 @@ export class RequestError extends Error {
   constructor(public details: ApiErrorBody) { super(details.message); }
 }
 
-export async function request<T>(path: string, method = "GET", value?: unknown, signal?: AbortSignal): Promise<T> {
+export async function request<T>(path: string, method = "GET", value?: unknown, signal?: AbortSignal, round?: number): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(path, { method, cache: "no-store", headers: value === undefined ? undefined : { "Content-Type": "application/json" }, body: value === undefined ? undefined : JSON.stringify(value), signal });
+    response = await fetch(path, { method, cache: "no-store", headers: { ...(value === undefined ? {} : { "Content-Type": "application/json" }), ...(round === undefined ? {} : { "X-Room-Round": String(round) }) }, body: value === undefined ? undefined : JSON.stringify(value), signal });
   } catch (error) {
     if (signal?.aborted) throw error;
     throw new RequestError({ code: "NETWORK_ERROR", message: "We couldn't connect. Your draft is still here; please try again." });

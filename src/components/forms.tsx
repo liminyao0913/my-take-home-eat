@@ -22,13 +22,13 @@ export function FormError({ error }: { error: ApiErrorBody | null }) {
 export const emptyOption = (): OptionInput => ({ placeName: "", location: "", cuisine: "Other", priceLevel: 2, startTime: "12:30", link: "" });
 
 export function OptionFields({ value, onChange, errors = {}, prefix = "" }: { value: OptionInput; onChange: (value: OptionInput) => void; errors?: Record<string, string[]>; prefix?: string }) {
-  const set = (name: keyof OptionInput, next: string | number) => onChange({ ...value, [name]: next });
+  const set = (name: keyof OptionInput, next: string | number | null) => onChange({ ...value, [name]: next });
   return <div className="form-grid">
     <Field label="Place name" placeholder="e.g. Little Thai" required maxLength={120} value={value.placeName} onChange={(e) => set("placeName", e.target.value)} error={errors[`${prefix}placeName`]} />
     <Field label="Location" placeholder="Address or a familiar landmark" required maxLength={200} value={value.location} onChange={(e) => set("location", e.target.value)} error={errors[`${prefix}location`]} />
     <Field label="Start time" type="time" required value={value.startTime} onChange={(e) => set("startTime", e.target.value)} error={errors[`${prefix}startTime`]} />
-    <Select label="Cuisine" value={value.cuisine} onChange={(e) => set("cuisine", e.target.value)} error={errors[`${prefix}cuisine`]}>{CUISINES.map((c) => <option key={c}>{c}</option>)}</Select>
-    <Select label="Price per person" value={value.priceLevel} onChange={(e) => set("priceLevel", Number(e.target.value))} error={errors[`${prefix}priceLevel`]}>{[1, 2, 3].map((n) => <option key={n} value={n}>{"$".repeat(n)} · {PRICE_LABELS[n]}</option>)}</Select>
+    <Select label="Cuisine" value={value.cuisine ?? ""} onChange={(e) => set("cuisine", e.target.value || null)} error={errors[`${prefix}cuisine`]}><option value="">Not specified</option>{CUISINES.map((c) => <option key={c}>{c}</option>)}</Select>
+    <Select label="Price per person" value={value.priceLevel ?? ""} onChange={(e) => set("priceLevel", e.target.value ? Number(e.target.value) : null)} error={errors[`${prefix}priceLevel`]}><option value="">Not specified</option>{[1, 2, 3].map((n) => <option key={n} value={n}>{"$".repeat(n)} · {PRICE_LABELS[n]}</option>)}</Select>
     <Field label="Place link (optional)" type="url" placeholder="https://…" maxLength={2048} value={value.link} onChange={(e) => set("link", e.target.value)} error={errors[`${prefix}link`]} />
   </div>;
 }

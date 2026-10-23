@@ -4,7 +4,11 @@ import { ApiError } from "./errors";
 import { appOrigin } from "./identity";
 import { RoomService } from "./rooms";
 
-export const roomService = () => new RoomService(getDatabase().db);
+export const roomService = (request?: NextRequest) => {
+  const round = Number(request?.headers.get("X-Room-Round") ?? 1);
+  if (!Number.isSafeInteger(round) || round < 1) throw new ApiError(400, "INVALID_ROUND", "Send a valid round number.");
+  return new RoomService(getDatabase().db, Date.now, round);
+};
 export const json = (value: unknown, status = 200) => NextResponse.json(value, { status, headers: { "Cache-Control": "private, no-store" } });
 
 export async function handle(request: NextRequest, action: () => Promise<NextResponse> | NextResponse) {

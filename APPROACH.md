@@ -126,3 +126,17 @@ The new plan includes failure behavior, rollout order, acceptance checks, and of
 ## UX review scope clarification
 
 The user narrowed item 6 of [the UX review](docs/feedback/REVIEW.md) to experiencing the result flow quickly. The current HTTP address and port are accepted because DNS is not configured; changing the deployment URL is outside this item. The recommendation is a clearly labeled demo with sample inputs and an immediate result action, reachable from the home page in under one minute. Demo actions remain separate from real rooms and their ten-minute deadline. This records the requested improvement; the demo is not yet implemented.
+
+## UX review implementation
+
+The requested review improvements supersede the original single-round, deadline-only baseline above. Restaurant discovery, reusable profiles, email, and other next-release brainstorm items remain deferred.
+
+- Keep hard vetoes: a meal that someone cannot attend should not win through popularity. Optional constraint tags help others change the time, location, or budget; ordinary tastes belong in preferences.
+- Explicit approvals remain the strongest signal. Preferences resolve approval ties or rank options when no eligible meal has approvals. A winner with no approvals is a recommendation, not a confirmed plan. Unspecified restaurant cuisine or price earns no confirmed match for that preference dimension.
+- Keep the ten-minute deadline starting when a room or new round is created. This bounds the wait without needing an organizer to return. Add explicit “I'm done” readiness and an early-finish confirmation once every currently joined participant is ready. Only joined people count; silent invitees may still be missing. No automatic finish on the last ready response, so an organizer can still distribute the link.
+- Changing one's inputs clears one's readiness. Adding/removing an option or leaving clears everyone's readiness so they review the changed choices. A new participant joins unready. Participation status distinguishes a response from readiness.
+- When everything is excluded, invite another proposal immediately. After closure, any existing participant can start another round using the same link, with a new date and new ideas. Keep people and preferences, archive the frozen result, and clear votes, reasons, and readiness. Requests identify their round so an old tab cannot change a newer round by accident.
+- Require only a name, date, and a place/time idea on the main creation path; allow an empty room too. Secondary details are optional. Keep joining ahead of voting for guests and voting ahead of supporting information for participants on mobile.
+- Provide an isolated, labeled demo with fabricated options, participant inputs, immediate results, and an all-excluded example. It uses the real decision function without creating rooms or changing their deadlines.
+
+Backend milestone: 17 unit and 17 integration tests pass, including early finish, readiness changes, optional reasons, round history, stale requests, and a populated original-schema migration. The migration preserves identities, preferences, existing votes/results, and option ID continuity. UI and release verification are still in progress.

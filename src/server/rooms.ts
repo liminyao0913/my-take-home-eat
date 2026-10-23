@@ -1,16 +1,16 @@
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import {
-  createRoomInput, joinInput, optionInput, preferencesInput, responseInput, ROUND_MS,
+  BLOCK_REASONS, createRoomInput, joinInput, optionInput, preferencesInput, readyInput, responseInput, roundInput, ROUND_MS,
   type MealOption, type OptionInput, type Preferences, type RoomSnapshot,
 } from "@/lib/contracts";
 import { decide } from "@/lib/decision";
 import { minuteOfDay, minuteToTime, toInstant } from "@/lib/time";
 import type { Database } from "./db";
 import { ApiError, parseInput } from "./errors";
-import { options, participants, responses, rooms } from "./schema";
+import { options, participants, responses, roomRounds, rooms } from "./schema";
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Query = Database | Transaction;
@@ -42,6 +42,18 @@ function getOption(db: Query, roomId: string, optionId: number) {
   return option;
 }
 
+function validateDate(mealDate: string, timeZone: string, now: number) {
+  let date;
+  try { date = Temporal.PlainDate.from(mealDate, { overflow: "reject" }); }
+  catch { throw new ApiError(400, "INVALID_INPUT", "Choose a valid meal date.", { mealDate: ["Choose a valid date."] }); }
+  const today = Temporal.Instant.fromEpochMilliseconds(now).toZonedDateTimeISO(timeZone).toPlainDate();
+  if (Temporal.PlainDate.compare(date, today) < 0) throw new ApiError(400, "INVALID_INPUT", "Choose today or a future meal date.", { mealDate: ["The meal date is in the past."] });
+}
+
+function resetReadiness(db: Query, roomId: string) {
+  db.update(participants).set({ ready: false }).where(eq(participants.roomId, roomId)).run();
+}
+
 function optionValues(input: OptionInput, room: Pick<Room, "mealDate" | "timeZone" | "deadlineAt">, field = "startTime") {
   let startAt: number;
   try { startAt = toInstant(room.mealDate, input.startTime, room.timeZone); }
@@ -52,7 +64,7 @@ function optionValues(input: OptionInput, room: Pick<Room, "mealDate" | "timeZon
 
 function loadInputs(db: Query, room: Room) {
   const people = db.select().from(participants).where(and(eq(participants.roomId, room.id), eq(participants.active, true))).orderBy(asc(participants.createdAt), asc(participants.id)).all();
-  const votes = db.select({ participantId: responses.participantId, optionId: responses.optionId, choice: responses.choice }).from(responses)
+  const votes = db.select({ participantId: responses.participantId, optionId: responses.optionId, choice: responses.choice, reason: responses.reason }).from(responses)
     .innerJoin(participants, eq(participants.id, responses.participantId)).innerJoin(options, eq(options.id, responses.optionId))
     .where(and(eq(participants.roomId, room.id), eq(options.roomId, room.id), eq(participants.active, true))).all();
   const meals: MealOption[] = db.select().from(options).where(eq(options.roomId, room.id)).orderBy(asc(options.id)).all().map((o) => ({
@@ -60,18 +72,19 @@ function loadInputs(db: Query, room: Room) {
     priceLevel: o.priceLevel, link: o.link,
     approvalCount: votes.filter((v) => v.optionId === o.id && v.choice === "approve").length,
     blockCount: votes.filter((v) => v.optionId === o.id && v.choice === "block").length,
+    blockReasons: BLOCK_REASONS.map((reason) => ({ reason, count: votes.filter((v) => v.optionId === o.id && v.choice === "block" && v.reason === reason).length })).filter((r) => r.count),
   }));
   return { people, votes, meals };
 }
 
-function finalize(db: Query, room: Room, now: number): Room {
+function finalize(db: Query, room: Room, now: number, early = false): Room {
   if (room.result) return room;
   const { people, votes, meals } = loadInputs(db, room);
-  const result = decide({
+  const result = { ...decide({
     options: meals, preferences: people.map(preferencesOf), participantCount: people.length,
     voterCount: new Set(votes.filter((v) => v.choice === "approve").map((v) => v.participantId)).size,
-    deadlineAt: room.deadlineAt, timeZone: room.timeZone,
-  });
+    deadlineAt: early ? now : room.deadlineAt, timeZone: room.timeZone,
+  }), closedEarly: early };
   db.update(rooms).set({ result, resolvedAt: now }).where(eq(rooms.id, room.id)).run();
   return { ...room, result, resolvedAt: now };
 }
@@ -80,33 +93,37 @@ function snapshot(db: Query, room: Room, tokenHash: string | null, now: number):
   const { people, votes, meals } = loadInputs(db, room);
   const me = people.find((p) => p.tokenHash === tokenHash);
   return {
-    room: { id: room.id, title: room.title, mealDate: room.mealDate, area: room.area, timeZone: room.timeZone, createdAt: room.createdAt, deadlineAt: room.deadlineAt },
+    room: { id: room.id, title: room.title, mealDate: room.mealDate, area: room.area, timeZone: room.timeZone, createdAt: room.createdAt, deadlineAt: room.deadlineAt, round: room.round },
     state: room.result ? "closed" : "open", serverNow: now,
-    participants: people.map((p) => ({ id: p.id, displayName: p.displayName })), options: meals, result: room.result,
-    me: me ? { id: me.id, displayName: me.displayName, preferences: preferencesOf(me), choices: Object.fromEntries(votes.filter((v) => v.participantId === me.id).map((v) => [v.optionId, v.choice])) } : null,
+    participants: people.map((p) => ({ id: p.id, displayName: p.displayName, ready: p.ready, responded: p.ready || votes.some((v) => v.participantId === p.id) || p.cuisines.length > 0 || p.maxPriceLevel !== null || p.preferredStartMinute !== null })), options: meals, result: room.result,
+    me: me ? { id: me.id, displayName: me.displayName, ready: me.ready, preferences: preferencesOf(me), choices: Object.fromEntries(votes.filter((v) => v.participantId === me.id).map((v) => [v.optionId, v.choice])), blockReasons: Object.fromEntries(votes.filter((v) => v.participantId === me.id && v.choice === "block" && v.reason).map((v) => [v.optionId, v.reason!])) } : null,
+    previousRounds: db.select({ round: roomRounds.round, mealDate: roomRounds.mealDate, result: roomRounds.result }).from(roomRounds).where(eq(roomRounds.roomId, room.id)).orderBy(desc(roomRounds.round)).all(),
   };
 }
 
 export class RoomService {
-  constructor(private db: Database, private now: () => number = Date.now) {}
+  constructor(private db: Database, private now: () => number = Date.now, private expectedRound = 1) {}
+
+  private checkRound(room: Room) {
+    if (room.round !== this.expectedRound) throw new ApiError(409, "STALE_ROUND", "A new round has started. Review the new ideas before trying again.");
+  }
 
   create(tokenHash: string, value: unknown) {
     const input = parseInput(createRoomInput, value);
-    try { Temporal.PlainDate.from(input.mealDate, { overflow: "reject" }); }
-    catch { throw new ApiError(400, "INVALID_INPUT", "Choose a valid meal date.", { mealDate: ["Choose a valid date."] }); }
     try {
       if (/^[+-]/.test(input.timeZone)) throw new Error("offset");
       new Intl.DateTimeFormat("en", { timeZone: input.timeZone }).format();
     } catch { throw new ApiError(400, "INVALID_INPUT", "Choose a valid time zone.", { timeZone: ["Use a time zone such as America/Los_Angeles."] }); }
     return this.db.transaction((tx) => {
       const now = this.now();
+      validateDate(input.mealDate, input.timeZone, now);
       const id = randomBytes(18).toString("base64url");
       const personId = randomUUID();
       const room = { id, title: input.title, area: input.area, mealDate: input.mealDate, timeZone: input.timeZone, createdAt: now, deadlineAt: now + ROUND_MS };
       const meals = input.options.map((o, i) => ({ ...optionValues(o, room, `options.${i}.startTime`), roomId: id, authorId: personId, createdAt: now }));
       tx.insert(rooms).values(room).run();
       tx.insert(participants).values({ id: personId, roomId: id, tokenHash, displayName: input.displayName, createdAt: now }).run();
-      tx.insert(options).values(meals).run();
+      if (meals.length) tx.insert(options).values(meals).run();
       return { id, path: `/r/${id}` };
     }, { behavior: "immediate" });
   }
@@ -130,6 +147,7 @@ export class RoomService {
   private mutate(roomId: string, action: (tx: Transaction, room: Room, now: number) => void) {
     const accepted = this.db.transaction((tx) => {
       const room = getRoom(tx, roomId);
+      this.checkRound(room);
       const now = this.now(); // Read after acquiring the write lock, including any lock wait.
       if (room.result || now >= room.deadlineAt) {
         finalize(tx, room, now);
@@ -147,7 +165,7 @@ export class RoomService {
     this.mutate(roomId, (tx, room, now) => {
       const existing = tx.select().from(participants).where(and(eq(participants.roomId, room.id), eq(participants.tokenHash, tokenHash))).get();
       if (existing?.active) return;
-      if (existing) tx.update(participants).set({ active: true, displayName: input.displayName }).where(eq(participants.id, existing.id)).run();
+      if (existing) tx.update(participants).set({ active: true, ready: false, displayName: input.displayName }).where(eq(participants.id, existing.id)).run();
       else tx.insert(participants).values({ id: randomUUID(), roomId, tokenHash, displayName: input.displayName, createdAt: now }).run();
     });
   }
@@ -156,7 +174,7 @@ export class RoomService {
     const input = parseInput(preferencesInput, value);
     this.mutate(roomId, (tx) => {
       const person = getParticipant(tx, roomId, tokenHash);
-      tx.update(participants).set({ cuisines: input.cuisines, maxPriceLevel: input.maxPriceLevel,
+      tx.update(participants).set({ ready: false, cuisines: input.cuisines, maxPriceLevel: input.maxPriceLevel,
         preferredStartMinute: input.startTime === null ? null : minuteOfDay(input.startTime), preferredEndMinute: input.endTime === null ? null : minuteOfDay(input.endTime),
       }).where(eq(participants.id, person.id)).run();
     });
@@ -167,6 +185,7 @@ export class RoomService {
     this.mutate(roomId, (tx, room, now) => {
       const person = getParticipant(tx, roomId, tokenHash);
       tx.insert(options).values({ ...optionValues(input, room), roomId, authorId: person.id, createdAt: now }).run();
+      resetReadiness(tx, roomId);
     });
   }
 
@@ -176,6 +195,7 @@ export class RoomService {
       const option = getOption(tx, roomId, optionId);
       if (option.authorId !== person.id) throw new ApiError(403, "NOT_YOUR_OPTION", "Only the person who proposed this option can remove it.");
       tx.delete(options).where(eq(options.id, option.id)).run();
+      resetReadiness(tx, roomId);
     });
   }
 
@@ -185,7 +205,8 @@ export class RoomService {
       const person = getParticipant(tx, roomId, tokenHash);
       getOption(tx, roomId, optionId);
       if (input.choice === null) tx.delete(responses).where(and(eq(responses.participantId, person.id), eq(responses.optionId, optionId))).run();
-      else tx.insert(responses).values({ participantId: person.id, optionId, choice: input.choice }).onConflictDoUpdate({ target: [responses.participantId, responses.optionId], set: { choice: input.choice } }).run();
+      else tx.insert(responses).values({ participantId: person.id, optionId, choice: input.choice, reason: input.reason }).onConflictDoUpdate({ target: [responses.participantId, responses.optionId], set: { choice: input.choice, reason: input.reason } }).run();
+      tx.update(participants).set({ ready: false }).where(eq(participants.id, person.id)).run();
     });
   }
 
@@ -193,7 +214,46 @@ export class RoomService {
     this.mutate(roomId, (tx) => {
       const person = getParticipant(tx, roomId, tokenHash);
       tx.delete(responses).where(eq(responses.participantId, person.id)).run();
-      tx.update(participants).set({ active: false, cuisines: [], maxPriceLevel: null, preferredStartMinute: null, preferredEndMinute: null }).where(eq(participants.id, person.id)).run();
+      tx.update(participants).set({ active: false, ready: false, cuisines: [], maxPriceLevel: null, preferredStartMinute: null, preferredEndMinute: null }).where(eq(participants.id, person.id)).run();
+      resetReadiness(tx, roomId);
     });
+  }
+
+  setReady(roomId: string, tokenHash: string | null, value: unknown) {
+    const input = parseInput(readyInput, value);
+    this.mutate(roomId, (tx) => {
+      const person = getParticipant(tx, roomId, tokenHash);
+      tx.update(participants).set({ ready: input.ready }).where(eq(participants.id, person.id)).run();
+    });
+  }
+
+  finish(roomId: string, tokenHash: string | null) {
+    this.mutate(roomId, (tx, room, now) => {
+      getParticipant(tx, roomId, tokenHash);
+      const { people, meals } = loadInputs(tx, room);
+      if (!people.length || people.some((p) => !p.ready)) throw new ApiError(409, "NOT_READY", "Everyone who joined must mark ‘I'm done’ before finishing early.");
+      if (!meals.length) throw new ApiError(409, "NO_OPTIONS", "Add a meal idea before finishing the round.");
+      finalize(tx, room, now, true);
+    });
+  }
+
+  startRound(roomId: string, tokenHash: string | null, value: unknown) {
+    const input = parseInput(roundInput, value);
+    this.db.transaction((tx) => {
+      let room = getRoom(tx, roomId);
+      this.checkRound(room);
+      const person = getParticipant(tx, roomId, tokenHash);
+      const now = this.now();
+      if (!room.result && now < room.deadlineAt) throw new ApiError(409, "ROUND_OPEN", "Finish the current round before starting another.");
+      validateDate(input.mealDate, room.timeZone, now);
+      const next = { ...room, round: room.round + 1, mealDate: input.mealDate, deadlineAt: now + ROUND_MS, result: null, resolvedAt: null };
+      const meals = input.options.map((o, i) => ({ ...optionValues(o, next, `options.${i}.startTime`), roomId, authorId: person.id, createdAt: now }));
+      room = finalize(tx, room, now);
+      tx.insert(roomRounds).values({ roomId, round: room.round, mealDate: room.mealDate, result: room.result! }).run();
+      tx.delete(options).where(eq(options.roomId, roomId)).run();
+      resetReadiness(tx, roomId);
+      tx.update(rooms).set({ round: next.round, mealDate: next.mealDate, deadlineAt: next.deadlineAt, result: null, resolvedAt: null }).where(eq(rooms.id, roomId)).run();
+      tx.insert(options).values(meals).run();
+    }, { behavior: "immediate" });
   }
 }

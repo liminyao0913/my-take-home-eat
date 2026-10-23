@@ -7,7 +7,7 @@ export async function POST(request: NextRequest, context: RoomContext) {
   return handle(request, async () => {
     const { roomId } = await context.params;
     const guest = identity(request, true);
-    const service = roomService();
+    const service = roomService(request);
     service.join(roomId, guest.hash!, await body(request));
     const response = json(service.get(roomId, guest.hash));
     setIdentity(response, guest.token!);

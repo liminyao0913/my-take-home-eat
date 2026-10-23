@@ -53,7 +53,7 @@ function AddOption({ data, busy, mutate }: { data: RoomSnapshot; busy: boolean; 
 }
 
 function MealDetails({ option, timeZone }: { option: MealOption; timeZone: string }) {
-  return <><div className="meal-tags"><span>{option.cuisine}</span><span>{"$".repeat(option.priceLevel)} · {PRICE_LABELS[option.priceLevel]}</span><span>{formatTime(option.startAt, timeZone)}</span></div><p className="meal-location"><span aria-hidden="true">↳</span> {option.location}</p>{option.link && <a className="place-link" href={option.link} target="_blank" rel="noopener noreferrer">View place ↗</a>}</>;
+  return <><div className="meal-tags"><span>{option.cuisine ?? "Cuisine not specified"}</span><span>{option.priceLevel === null ? "Price not specified" : `${"$".repeat(option.priceLevel)} · ${PRICE_LABELS[option.priceLevel]}`}</span><span>{formatTime(option.startAt, timeZone)}</span></div><p className="meal-location"><span aria-hidden="true">↳</span> {option.location || "Location to confirm"}</p>{option.link && <a className="place-link" href={option.link} target="_blank" rel="noopener noreferrer">View place ↗</a>}</>;
 }
 
 function Result({ data }: { data: RoomSnapshot }) {

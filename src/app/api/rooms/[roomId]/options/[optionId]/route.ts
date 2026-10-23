@@ -7,7 +7,7 @@ export async function DELETE(request: NextRequest, context: OptionContext) {
   return handle(request, async () => {
     const params = await context.params;
     const hash = identity(request).hash;
-    const service = roomService();
+    const service = roomService(request);
     service.removeOption(params.roomId, hash, optionId(params.optionId));
     return json(service.get(params.roomId, hash));
   });
