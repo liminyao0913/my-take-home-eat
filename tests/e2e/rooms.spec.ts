@@ -35,7 +35,7 @@ test("three people propose meals and vote concurrently, with one frozen result",
 
 test("preferences choose without votes; dirty drafts survive shared updates", async ({ page, browser }) => {
   const url = await createRoom(page);
-  await page.getByText("My preferences", { exact: false }).click();
+  await page.getByRole("button", { name: "My preferences (optional)", exact: true }).click();
   await page.getByLabel("Italian", { exact: true }).check();
   const context = await browser.newContext();
   try {
@@ -44,13 +44,13 @@ test("preferences choose without votes; dirty drafts survive shared updates", as
     await expect(page.getByLabel("Italian", { exact: true })).toBeChecked();
     await page.getByRole("button", { name: "Save preferences" }).click();
     await expect(page.getByText("Saved ✓", { exact: true })).toBeVisible();
-    await sam.getByText("My preferences", { exact: false }).click();
+    await sam.getByRole("button", { name: "My preferences (optional)", exact: true }).click();
     await sam.getByLabel("Italian", { exact: true }).check();
     await sam.getByLabel("Preferred price ceiling").selectOption("1");
     await sam.getByRole("button", { name: "Save preferences" }).click();
     await expect(sam.getByText("Saved ✓", { exact: true })).toBeVisible();
     await page.reload();
-    await page.getByText("My preferences", { exact: false }).click();
+    await page.getByRole("button", { name: "My preferences (optional)", exact: true }).click();
     await expect(page.getByLabel("Italian", { exact: true })).toBeChecked();
     deadline(url);
     await expectWinner(page, "Pasta House"); await expectWinner(sam, "Pasta House");
@@ -103,6 +103,7 @@ test("ownership, guest continuity, CSRF protection and leaving work through HTTP
     await expect(samCard.getByRole("button", { name: /I'd go 0/ })).toHaveAttribute("aria-pressed", "false");
     await sam.reload();
     await expect(samCard.getByRole("button", { name: /Can't do this/ })).toHaveAttribute("aria-pressed", "true");
+    await sam.locator(".people-panel > summary").click();
     await sam.getByRole("button", { name: "Leave this meal" }).click();
     await expect(sam.getByRole("button", { name: "Join the table" })).toBeVisible();
     await expect(card(page, "Little Thai")).not.toContainText("Excluded");
@@ -150,7 +151,7 @@ test("mobile keyboard flow, inline validation, and a copyable result", async ({ 
   const approve = card(page, "Pasta House").getByRole("button", { name: /I'd go/ });
   await approve.focus(); await page.keyboard.press("Enter");
   await expect(approve).toHaveAttribute("aria-pressed", "true");
-  await page.getByText("My preferences", { exact: false }).click();
+  await page.getByRole("button", { name: "My preferences (optional)", exact: true }).click();
   await page.getByLabel("From", { exact: true }).fill("12:00");
   await page.getByRole("button", { name: "Save preferences" }).click();
   await expect(page.locator(".preference-panel").getByRole("alert")).toContainText("highlighted");
@@ -190,7 +191,7 @@ for (const clipboard of ["unavailable", "denied"] as const) {
 
 test("a network failure preserves the preference draft until a successful retry", async ({ page, context }) => {
   await createRoom(page);
-  await page.getByText("My preferences", { exact: false }).click();
+  await page.getByRole("button", { name: "My preferences (optional)", exact: true }).click();
   await page.getByLabel("Thai", { exact: true }).check();
   await context.setOffline(true);
   await page.getByRole("button", { name: "Save preferences" }).click();
@@ -200,6 +201,6 @@ test("a network failure preserves the preference draft until a successful retry"
   await page.getByRole("button", { name: "Save preferences" }).click();
   await expect(page.getByText("Saved ✓", { exact: true })).toBeVisible();
   await page.reload();
-  await page.getByText("My preferences", { exact: false }).click();
+  await page.getByRole("button", { name: "My preferences (optional)", exact: true }).click();
   await expect(page.getByLabel("Thai", { exact: true })).toBeChecked();
 });

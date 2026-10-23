@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type RefObject } from "react";
 import { CUISINES, PRICE_LABELS, type ApiErrorBody, type Preferences } from "@/lib/contracts";
 import { errorDetails } from "@/lib/client";
 import { Field, FormError, Select } from "./forms";
 import type { Mutate } from "./use-room";
 
-export function PreferenceForm({ initial, busy, mutate }: { initial: Preferences; busy: boolean; mutate: Mutate }) {
+export function PreferenceForm({ initial, busy, mutate, detailsRef }: { initial: Preferences; busy: boolean; mutate: Mutate; detailsRef: RefObject<HTMLDetailsElement | null> }) {
   const [value, setValue] = useState(initial);
   const [error, setError] = useState<ApiErrorBody | null>(null);
   const [saved, setSaved] = useState(false);
@@ -16,7 +16,7 @@ export function PreferenceForm({ initial, busy, mutate }: { initial: Preferences
     try { await mutate("/preferences", "PUT", value); setSaved(true); }
     catch (error) { setError(errorDetails(error)); }
   }
-  return <details className="panel preference-panel"><summary><span>My preferences <small>optional & private</small></span><span className="expand-icon" aria-hidden="true">+</span></summary>
+  return <details className="panel preference-panel" ref={detailsRef}><summary><span>My preferences <small>optional & private</small></span><span className="expand-icon" aria-hidden="true">+</span></summary>
     <form onSubmit={submit}><p className="muted small">Your preferences help if votes tie or nobody votes. Leave anything blank to stay flexible.</p>
       <fieldset disabled={busy}>
         <fieldset className="cuisine-picker"><legend>Cuisines you like</legend><div className="chips">{CUISINES.map((c) => <label key={c} className={value.cuisines.includes(c) ? "chip checked" : "chip"}><input type="checkbox" checked={value.cuisines.includes(c)} onChange={(e) => change({ ...value, cuisines: e.target.checked ? [...value.cuisines, c] : value.cuisines.filter((item) => item !== c) })} />{c}</label>)}</div></fieldset>

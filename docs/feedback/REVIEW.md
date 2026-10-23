@@ -6,6 +6,21 @@ App: [Let's Eat](http://24.130.34.221:3000/)
 
 The visual design and basic flows are cohesive. The biggest opportunities are to help groups recover from disagreement, reach a decision sooner, and reduce the organizer's setup effort.
 
+## Implementation follow-up
+
+The observations below describe the original review. All six requested improvements have now been implemented; the existing public HTTP address and port remain unchanged.
+
+| Item | Delivered behavior | Verification |
+| --- | --- | --- |
+| 1. Disagreement recovery | Immediate conflict banner and focused alternative-proposal form; a new round keeps the same link, participants, and preferences, clears responses/readiness, and archives the previous result. | Separate browsers see the new round without rejoining; stale round writes are rejected; history survives refresh. |
+| 2. Early completion | “I'm done,” response/readiness counts, per-person status, and explicit confirmation once all joined people are ready. A new unready joiner prevents early finish. | Three browser sessions, HTTP race check, unchanged original deadline, identical saved early result after refresh. |
+| 3. Simpler setup | Name, date, and place/time are the primary fields. Restaurant and meal details are optional; rooms can start empty. Unknown cuisine/price never count as confirmed preference matches. | Browser journeys for minimal and empty-room creation; scoring unit test. Restaurant-link autofill remains the later enhancement identified in this review. |
+| 4. Useful vetoes | Optional Time conflict, Dietary restriction, Too far, and Over budget reasons; shared aggregate counts; hard exclusion is preserved. | Browser alternatives journey and integration tests for aggregation, optional reasons, clearing, and validation. |
+| 5. Mobile voting | Guests join above the cards; participants get voting before collapsed people/preferences panels, with a small preferences shortcut and response statuses. | 375-pixel browser layout/keyboard checks and screenshot; no horizontal overflow. |
+| 6. Quick results | **Try a demo** opens prefilled fictional options and inputs, voting, immediate **Show result**, preference-only recommendations, and an all-excluded example. | Home-to-result browser journey under one minute; no room API requests; shared production decision function. |
+
+The rationale is recorded in [APPROACH.md](../../APPROACH.md#ux-review-implementation), and the current behavior is reflected in the [product plan](../plan.md) and [technical spec](../tech-spec.md). The regular production-build browser suite passed all 17 runnable scenarios. Release evidence is tracked in [verification.md](../verification.md).
+
 ## Review scope
 
 This review is based on hands-on testing of the deployed app, rather than a source-code review. A room labeled **UX Review · test meal** was created with fictional restaurants. Testing covered:

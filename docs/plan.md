@@ -1,6 +1,6 @@
 # Let's Eat — simple v1 product plan
 
-Status: simplified product baseline. The audience and core flow are confirmed; the choices below are defaults selected in response to the request for simplicity. Implementation choices are in [the technical spec](tech-spec.md).
+Status: product baseline updated for the [UX review](feedback/REVIEW.md), including early completion, repeat rounds, simpler setup, and an instant demo. Implementation choices are in [the technical spec](tech-spec.md).
 
 The next round of brainstorming is in [the next feature plan](next-features-plan.md): ZIP-based restaurant discovery, concurrent groups, result popups, room copying, and reusable preferences. That proposal keeps meals soon as the main flow and drops email notifications; the v1 baseline below describes the existing product.
 
@@ -16,41 +16,42 @@ Assume a small trusted group, one meal date, and one general area. The existing 
 
 | Question | V1 decision | Why |
 | --- | --- | --- |
-| Automatic or organizer-confirmed result? | Close automatically ten minutes after room creation. | One way to finish; the organizer does not need to stay online. |
+| Automatic or organizer-confirmed result? | Close automatically ten minutes after creation, or explicitly finish once all joined people are ready. | Bounds the wait while allowing quick agreement; no special organizer role is needed. |
 | Choose the place and time separately? | Each option is one place at one start time. | Every vote describes a complete meal. |
 | Must an option work for everyone? | Exclude any option explicitly marked “Can't do this” by a participant. If none remain, close without a winner. | Respect stated constraints without building an automatic constraint-matching system. |
 | Show votes while people respond? | Show approval counts immediately. | The group can see where agreement is forming. |
 | How sophisticated should preference scoring be? | Use an equal-weight match score for each person, then take the group average. | Easy to explain and verify; no adjustable weights or fairness formula. |
 
-For exact ties, choose the earliest-added eligible option among those tied. This is predictable and needs no random draw. If the group wants another round, it creates another room.
+For exact ties, choose the earliest-added eligible option among those tied. This is predictable and needs no random draw. After closure, a participant can start another round using the same room and link.
 
 ## 3. The core journey
 
 ### Create
 
-1. Enter a display name, meal title, date, and general area. The date defaults to today.
-2. Add at least one meal option; two or three are encouraged.
+1. Enter a display name and meal date. Defaults suggest a meal an hour ahead in the browser’s time zone. Title, area, and a zone override are optional details.
+2. Add a place and start time, or choose to create the room first and add ideas together. Restaurant details are optional.
 3. Create the room. Its ten-minute countdown starts now.
 4. Copy the single room link into the group chat.
 
-All option start times must be after the deadline, on the selected meal date. Show times in one clearly labeled room time zone. The date, area, and deadline stay fixed after creation.
+All option start times must be after the deadline, on the selected meal date. Show times in one clearly labeled room time zone. The date and deadline stay fixed within a round. A new round can use another date; the title, area, and time zone remain attached to the room.
 
 ### Join and respond
 
 1. Open the link and immediately see the options and countdown.
 2. Enter a display name when first contributing.
 3. Vote for any acceptable options, add an option, and optionally fill in preferences.
-4. Mark a specific option “Can't do this” if it genuinely cannot work.
+4. Mark a specific option “Can't do this” if it genuinely cannot work; optionally share a constraint tag.
+5. Mark “I’m done” when ready. Once every joined participant is ready, anyone in the room can confirm an early finish.
 
-People can do any combination of these actions. There is no required questionnaire, special abstention mode, or “everyone is ready” step. Skipping preferences or votes leaves those inputs empty; silence is not agreement.
+People can do any combination of these actions. There is no required questionnaire. Readiness is optional when waiting for the deadline. Skipping preferences or votes leaves those inputs empty; silence is not agreement.
 
 ### Get the result
 
-At the deadline, close the room and choose using the rules in section 6. Inputs are frozen, and later visitors see the same result.
+At the deadline or an explicitly confirmed early finish, close the round and choose using the rules in section 6. Inputs are frozen, and later visitors see the same result until another round starts.
 
 Show the winning place, date, start time, location, price level, and a short reason: “Most votes,” “Best preference match,” “Votes tied; best preference match,” or “Tied; first proposed option selected.” Also show how many participants voted or supplied preferences so limited input is visible.
 
-Provide a copyable summary with the room link. The service does not send messages or make reservations. If every option is excluded or removed, show “No option works for everyone” and a link to create a new room.
+Provide a copyable summary with the room link. The service does not send messages or make reservations. When all options are excluded while open, show “No viable options right now” with a direct alternative-proposal action. After closure, participants can start another round here with new ideas, preserving names and preferences while clearing votes, constraints, and readiness. Archive the previous result. A winner with no approvals is labeled “Suggested meal” and asks the group to confirm before heading out.
 
 ## 4. What the product looks like
 
@@ -59,10 +60,15 @@ Use a mobile-first page with readable cards, a light background, dark text, and 
 The shared page contains:
 
 - **Header:** meal title, date, area, copy-link button, and countdown.
-- **People:** names or initials and the number who joined.
+- **People:** a compact response count, expandable names, and each person’s response/readiness status.
 - **Your preferences:** a small collapsible form.
 - **Options:** meal cards with vote counts, “I'd go,” “Can't do this,” and a visible add-option button.
-- **Result:** after closing, a prominent winner or no-winner message.
+- **Readiness:** “I’m done,” ready count, and an explicit early-finish confirmation when all joined people are ready.
+- **Result:** after closing, a prominent winner or no-winner message and a same-room new-round action.
+
+On mobile, guests see the join form before the options. After joining, voting comes before the collapsed participant list and preferences; a small shortcut opens preferences.
+
+The home page also links to **Try a demo**. Its fabricated options and participant inputs use the same decision function, with immediate results for votes, preference fallback, and all-excluded outcomes. Demo actions stay in the browser and never create real rooms or alter deadlines.
 
 Example card:
 
@@ -95,13 +101,13 @@ Anyone can add an option containing:
 | Field | Input |
 | --- | --- |
 | Place | Restaurant or meeting-place name |
-| Location | Address or recognizable location description |
+| Location | Optional address or recognizable location description |
 | Start time | A time on the room's date, after its deadline |
-| Cuisine | One cuisine tag, chosen from the same list used for preferences |
-| Price level | Budget, mid-range, or splurge; the proposer's rough estimate |
+| Cuisine | Optional cuisine tag, chosen from the same list used for preferences |
+| Price level | Optional budget, mid-range, or splurge estimate |
 | Link | Optional menu or place link |
 
-Required cuisine and price fields make scoring possible without missing-data rules. “Other” is a valid cuisine tag. Entry is manual; no restaurant lookup is required.
+Unspecified cuisine and price remain unknown and earn no confirmed match for a supplied preference in that dimension. “Other” is a valid cuisine tag. Entry is manual; no restaurant lookup is required.
 
 Once submitted, option details are fixed. Before the deadline, the author can remove their own option and add a corrected one. Removing it discards its votes and flags; a replacement starts fresh. This avoids editing a meal that people have already approved. Encourage three to five options without adding caps or duplicate-detection workflows.
 
@@ -117,7 +123,7 @@ All three inputs are optional and apply only to this room. Blank fields, includi
 
 These are **soft preferences**. A preferred price ceiling or time window affects scoring; it does not automatically exclude an option. Detailed preferences are visible only to the person who entered them.
 
-When an option cannot work because of dietary needs, cost, location, or time, the participant marks it “Can't do this.” That flag makes it ineligible for the whole group. No explanation is required, and the participant can remove their flag. The service does not infer dietary suitability or check restaurant information.
+When an option cannot work because of dietary needs, cost, location, or time, the participant marks it “Can't do this.” That flag makes it ineligible for the whole group. No explanation is required. Optional tags are Time conflict, Dietary restriction, Too far, and Over budget. Their aggregate counts help the group propose alternatives. The participant can change the tag or remove their flag. The service does not infer dietary suitability or check restaurant information.
 
 ### Votes and exclusion flags
 
@@ -125,11 +131,13 @@ When an option cannot work because of dietary needs, cost, location, or time, th
 
 For the same participant and option, approval and “Can't do this” are mutually exclusive: choosing one replaces the other. Other people's approvals can remain on an excluded option, but cannot make it win. If the exclusion is removed, those approvals count again.
 
+Changing one’s responses or preferences resets one’s readiness. Adding or removing an option, or someone leaving, resets everyone’s readiness. A new joiner is unready. A response count includes votes, saved preferences, or readiness; it does not establish unanimous approval.
+
 Any new option needs participant review. An unflagged option means that nobody has explicitly ruled it out; it is not a guarantee that every invitee can attend.
 
 ## 6. Decision rules
 
-Use only inputs submitted before the deadline. The room closes automatically even if every browser is closed, and the recorded result stays fixed.
+Use only inputs submitted before the round closes. The room closes automatically even if every browser is closed, and the recorded result stays fixed.
 
 1. **Find eligible options:** remove deleted options and any with at least one “Can't do this” flag.
 2. **Handle no options:** if none remain, close with no winner. Never silently exclude a person or ignore their flag.
@@ -148,13 +156,13 @@ Example: an option matching two of someone's three preferences scores 2/3 for th
 
 No votes and no preferences therefore selects the first eligible proposal, with the explanation “No votes or preferences to rank these options; first proposed option selected.” If votes exist only on excluded options, explain that those options could not win and apply the preference fallback to the remaining choices.
 
-There is no quorum. Use the inputs received, without assuming that everyone invited joined or agreed.
+At the deadline there is no quorum. Use the inputs received, without assuming that everyone invited joined or agreed. Early finish requires all currently joined people to be ready, at least one option, and an explicit confirmation showing the current participant count. Invited people who have not joined do not count. Readiness alone is not an approval vote.
 
 ## 7. Boundaries and acceptance checks
 
-V1 has **two states: Open and Closed**. A closed room has either a winner or a no-winner explanation. It never reopens.
+Each round has **two states: Open and Closed**. A closed round has either a winner or a no-winner explanation. A participant can start a new round on the same link, with new options and a fresh ten-minute deadline. Old results remain frozen in history. Stale requests from a previous round are rejected.
 
-Defer early finalization, configurable timers, repeated rounds, full meal-duration scheduling, multi-date polls, automatic dietary checks, fairness weights, random tie-breaks, saved profiles, restaurant discovery, travel estimates, reminders, chat, reservations, and payments.
+Defer configurable timers, full meal-duration scheduling, multi-date polls, automatic dietary checks, fairness weights, random tie-breaks, saved profiles, restaurant discovery, travel estimates, reminders, chat, reservations, and payments.
 
 Before implementation is considered complete, verify:
 
@@ -168,7 +176,11 @@ Before implementation is considered complete, verify:
 | Someone skips preference fields | Only answered fields count; people with no preferences do not affect the average. |
 | Scores also tie, including with no preference data | The earliest-added tied option wins consistently. |
 | An option receives a “Can't do this” flag | It cannot win, even if it has the most approvals. |
-| Every option is flagged or removed | The room closes with no winner. |
+| Every option is flagged or removed | The round closes with no winner; the same group can start another round. |
+| All options are excluded before closing | A conflict banner points to adding an alternative. |
+| Everyone joined is ready | Show participation status and confirm an early finish; a new unready joiner prevents it. |
+| Another round starts | Keep the link, names, and preferences; clear votes and readiness; reject old-round requests. |
+| The reviewer chooses Try a demo | Reach a clearly labeled sample result in under one minute with no restaurant entry. |
 | An author replaces an option | The replacement inherits no votes or flags. |
 | A participant leaves before the deadline | Their preferences, votes, and flags stop influencing the result. |
 | Nobody has the page open at the deadline | The room still closes using the inputs received before the cutoff. |

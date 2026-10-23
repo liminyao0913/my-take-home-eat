@@ -6,6 +6,7 @@ import type { RoomSnapshot } from "../../src/lib/contracts";
 
 export async function fillOption(scope: Locator, name: string, cuisine = "Thai", price = "1") {
   await scope.getByLabel("Place name", { exact: true }).fill(name);
+  await scope.getByText("Restaurant details (optional)", { exact: true }).click();
   await scope.getByLabel("Location", { exact: true }).fill(`${name} on Main St`);
   await scope.getByLabel("Start time", { exact: true }).fill("12:30");
   await scope.getByLabel("Cuisine", { exact: true }).selectOption(cuisine);
@@ -15,6 +16,7 @@ export async function fillOption(scope: Locator, name: string, cuisine = "Thai",
 export async function createRoom(page: Page, two = true, origin = "/") {
   await page.goto(origin);
   await page.getByLabel("Your name").fill("Alex");
+  await page.getByText("Meal details (optional)", { exact: true }).click();
   await page.getByLabel("Meal title").fill("Lunch with the crew");
   await page.getByLabel("Meal date").fill(new Date(Date.now() + 86400000).toISOString().slice(0, 10));
   await page.getByLabel("Area", { exact: true }).fill("Downtown");
@@ -33,7 +35,7 @@ export async function joinRoom(page: Page, url: string, name: string) {
   await page.goto(url);
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join the table" }).click();
-  await expect(page.getByRole("button", { name: "Leave this meal" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "I'm done", exact: true })).toBeVisible();
 }
 
 export function apiUrl(url: string) {

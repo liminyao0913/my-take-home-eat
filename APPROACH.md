@@ -140,3 +140,9 @@ The requested review improvements supersede the original single-round, deadline-
 - Provide an isolated, labeled demo with fabricated options, participant inputs, immediate results, and an all-excluded example. It uses the real decision function without creating rooms or changing their deadlines.
 
 Backend milestone: 17 unit and 17 integration tests pass, including early finish, readiness changes, optional reasons, round history, stale requests, and a populated original-schema migration. The migration preserves identities, preferences, existing votes/results, and option ID continuity. UI and release verification are still in progress.
+
+UI milestone: all six review improvements are implemented. The demo shares meal cards, result presentation, and scoring with real rooms while keeping its state entirely in the browser. Result wording distinguishes an approved group pick from a no-approval suggestion. Existing callers with no round header default to round 1, so they cannot accidentally mutate a later round.
+
+All 17 regular browser scenarios passed against the production build, including the five new review journeys and the existing restart/backup, private preferences, constraints, origin/ownership, mobile, network-retry, and clipboard checks. The new recovery test exposed duplicate React keys on sibling forms; distinct keys fixed the duplicated forms and the regression now asserts only one add-idea form remains. Type checking, lint, and production build pass. The unaccelerated deadline check and public smoke test are in progress.
+
+Before applying migration 0001 to the running host, saved a consistent SQLite backup. Compared checksums over every original column before/after migration: all 4 rooms, 7 participants, 5 options, and 3 responses were preserved exactly, and SQLite integrity/foreign-key checks passed. Restarted the updated production app at the same public address and port.

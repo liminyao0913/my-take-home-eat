@@ -72,19 +72,20 @@ Database modules are server-only. Keep form drafts in React state and use ordina
 
 ## 3. UI behavior
 
-There are two page routes:
+There are three page routes:
 
-- **/**: display name, title, date, area, and initial meal options. Detect the browser's IANA time zone, show it, and store it with the room. Successful creation redirects to the shareable room.
-- **/r/[roomId]**: header and copy-link action, participants, inline join form when needed, collapsible preferences, option cards, add-option form, and the result when closed.
+- **/**: display name, date, and a place/time idea, with a room-first option. Secondary meal and restaurant details live in optional disclosures. Detect the browser's IANA time zone, show it, and store it with the room. Successful creation redirects to the shareable room.
+- **/r/[roomId]**: header and copy-link action, participation count, inline join form before voting for guests, meal cards, readiness controls, collapsed participant statuses and preferences, and the result/new-round form after closure. Voting precedes supporting panels on mobile.
+- **/demo**: fabricated options, participant responses, and preferences held only in component state. Shared meal cards, result rendering, and the pure decision function demonstrate votes, preference fallback, and all-excluded results immediately. No room API calls, cookies, database writes, or deadline changes.
 
-Use the same page for Open and Closed. A closed page disables contributions and displays the saved outcome. Anonymous visitors can view either state.
+Use the same page for Open and Closed. A closed page disables contributions to that round and displays the saved outcome; active participants can start another round using the same link. Anonymous visitors can view either state.
 
 Implementation details that matter:
 
 - Save preferences explicitly, keeping unsaved form text intact during polling.
 - Submit an intended response such as “approve,” “block,” or “clear”; disable that control while its request is pending.
 - Update visible vote counts after the server acknowledges a change, then refresh the room.
-- Avoid overlapping polls, discard stale fetch responses after mutations, and refresh on tab focus. Pause polling when hidden and stop when closed.
+- Avoid overlapping polls, discard stale fetch responses after mutations, and refresh on tab focus. Pause polling when hidden. Continue visible polling after closure so everyone sees a new round start. Key draft forms by round to discard drafts belonging to the previous round.
 - Every room response includes server time and the deadline. Use these to display the countdown; refresh when it reaches zero. The server decides whether a write is accepted.
 - Show validation errors beside fields. Preserve drafts after network errors and indicate when shared data may be stale.
 - Render server-provided names and notes as text. Open optional place links using safe link attributes.
@@ -110,14 +111,15 @@ All writes check the request Origin against APP_ORIGIN and require an active par
 
 ## 5. Database model and storage
 
-Use four application tables. Store timestamps as integer UTC epoch milliseconds, the meal date as YYYY-MM-DD, and the room time zone as an IANA identifier.
+Use five application tables. Store timestamps as integer UTC epoch milliseconds, the meal date as YYYY-MM-DD, and the room time zone as an IANA identifier.
 
 | Table | Main columns | Constraints |
 | --- | --- | --- |
-| rooms | id, title, meal_date, area, time_zone, created_at, deadline_at, result_json, resolved_at | Random text primary key. Result and resolved_at are null until materialization. Deadline is created_at + 600,000 ms. |
-| participants | id, room_id, token_hash, display_name, active, cuisines_json, max_price_level, preferred_start_minute, preferred_end_minute, created_at | UUID text primary key; unique (room_id, token_hash); room foreign key. Cuisines default to an empty JSON array; other optional preference fields are nullable. |
-| options | id, room_id, author_id, place_name, location, start_at, cuisine, price_level, link, created_at | INTEGER PRIMARY KEY AUTOINCREMENT, room and author foreign keys. ID defines proposal order and is never reused after deletion. |
-| responses | participant_id, option_id, choice | Composite primary key (participant_id, option_id); foreign keys; choice is approve or block. Clearing deletes the row. Deleting an option cascades to its responses. |
+| rooms | id, title, meal_date, area, time_zone, created_at, deadline_at, round, result_json, resolved_at | Random text primary key. Round defaults to 1. Result and resolved_at are null until materialization. Initial deadline is created_at + 600,000 ms; subsequent deadlines are new-round creation time + 600,000 ms. |
+| participants | id, room_id, token_hash, display_name, active, ready, cuisines_json, max_price_level, preferred_start_minute, preferred_end_minute, created_at | UUID text primary key; unique (room_id, token_hash); room foreign key. Ready defaults to false. Cuisines default to an empty JSON array; other optional preference fields are nullable. |
+| options | id, room_id, author_id, place_name, location, start_at, cuisine, price_level, link, created_at | INTEGER PRIMARY KEY AUTOINCREMENT, room and author foreign keys. ID defines proposal order and is never reused after deletion. Cuisine and price may be null; location may be empty. |
+| responses | participant_id, option_id, choice, reason | Composite primary key (participant_id, option_id); foreign keys; choice is approve or block. An optional reason tag belongs only to a block. Clearing deletes the row. Deleting an option cascades to its responses. |
+| room_rounds | room_id, round, meal_date, result_json | Composite primary key (room_id, round), room foreign key; immutable prior-round result snapshots. |
 
 Use check constraints for price levels 1–3, allowed response choices, valid preference-minute ranges, and both-or-neither time-window endpoints. Server validation checks cuisine membership and same-room relationships. Index room_id on participants and options, and option_id on responses.
 
@@ -132,7 +134,7 @@ Store the final result as a structured JSON snapshot: winner ID and meal details
 - Tests: a fresh temporary directory and SQLite file, isolated from both.
 - Initialize connections with foreign_keys=ON, journal_mode=WAL, synchronous=FULL, and a 5,000 ms busy timeout.
 - Reuse a server connection; avoid creating a new connection for each query.
-- Generate and commit migrations, then apply them explicitly. Lazy connection initialization prevents the build from creating or migrating a database.
+- Generate and commit migrations, then apply them through scripts/migrate.mjs. For table rebuilds it disables foreign keys before the migrator transaction, then enables and checks them afterward. Migration 0001 also preserves the option autoincrement high-water mark; a populated original-schema migration test checks votes, identities, preferences, frozen results, and ID continuity. Lazy connection initialization prevents the build from creating or migrating a database.
 - Keep transactions short and synchronous. Perform request parsing and any asynchronous work before entering a better-sqlite3 transaction.
 
 SQLite permits one writer at a time. WAL allows concurrent readers, but the database and its WAL files must stay on the same host. This app deliberately runs as one service instance. See [SQLite transactions](https://sqlite.org/lang_transaction.html) and [WAL behavior](https://sqlite.org/wal.html).
@@ -143,21 +145,24 @@ All endpoints use JSON. Successful room mutations return the updated snapshot, i
 
 | Method and route | Input / effect |
 | --- | --- |
-| POST /api/rooms | Name, title, date, area, time zone, initial options. Atomically create the room, creator, and at least one option; return room ID and shared path. |
+| POST /api/rooms | Name, title, date, area, time zone, initial options. Atomically create the room, creator, and zero or more options; return room ID and shared path. |
 | GET /api/rooms/:roomId | Public room snapshot plus the caller's own preferences and response choices, if recognized. Materialize the result if due. |
 | POST /api/rooms/:roomId/participants | Join using display name, or restore/rejoin the same cookie identity. |
 | PUT /api/rooms/:roomId/preferences | Replace the caller's three preference inputs; empty inputs clear previous values. |
-| POST /api/rooms/:roomId/options | Add one complete, immutable option. |
+| POST /api/rooms/:roomId/options | Add one immutable place/time option with optional restaurant details; reset everyone’s readiness. |
 | DELETE /api/rooms/:roomId/options/:optionId | Remove the caller's own option and its responses. |
-| PUT /api/rooms/:roomId/options/:optionId/response | Set choice to approve, block, or null. Repeated identical requests must not increase counts. |
+| PUT /api/rooms/:roomId/options/:optionId/response | Set choice to approve, block, or null. An optional reason is allowed only for block. Repeated identical requests must not increase counts. Reset the caller’s readiness. |
 | DELETE /api/rooms/:roomId/participants/me | Leave and clear the caller's decision inputs. |
+| PUT /api/rooms/:roomId/participants/me/ready | Set the caller’s ready boolean; no automatic closure. |
+| POST /api/rooms/:roomId/finish | Require at least one option and all active participants ready; finalize immediately. |
+| POST /api/rooms/:roomId/rounds | After closure/expiry, supply a meal date and at least one new option. Archive the old result, clear options/responses/readiness, retain people/preferences, increment round, and start a fresh deadline atomically. |
 | GET /api/health | Readiness check that verifies the database is accessible and migrated; expose no private data. |
 
-The room snapshot contains room metadata, serverNow, state, active participant names, option details and aggregate counts, result, and an optional me object. Only me contains private preferences and the caller's own choices. Set Cache-Control: private, no-store on room responses and disable fetch caching.
+The room snapshot contains room metadata, serverNow, state, active participant names and responded/ready flags, option details and aggregate vote/reason counts, result, previousRounds, and an optional me object. Only me contains private preferences and the caller’s own choices and reason tags. A participant counts as responded when they have a response, saved preferences, or readiness; the flag does not imply approval. Set Cache-Control: private, no-store on room responses and disable fetch caching.
 
-Use 400 for invalid input, 401 for missing participation identity, 403 for a forbidden ownership action, 404 for a missing or incorrectly scoped resource, and 409 ROOM_CLOSED for contributions rejected at the deadline. Return a stable error code, a useful message, and field errors where appropriate.
+Use 400 for invalid input, 401 for missing participation identity, 403 for a forbidden ownership action, 404 for a missing or incorrectly scoped resource, and 409 ROOM_CLOSED for contributions rejected after closure. Round-scoped writes carry X-Room-Round (legacy requests default to 1); a mismatch returns 409 STALE_ROUND. An early finish with unready participants returns 409 NOT_READY, and without options returns 409 NO_OPTIONS. Restarting an open round returns 409 ROUND_OPEN. Return a stable error code, a useful message, and field errors where appropriate.
 
-Creation is all-or-nothing. Validate nonempty names, bounded text lengths, supported cuisine and price values, valid dates and time zones, at least one initial option, and optional HTTP/HTTPS links. Place links are displayed, not fetched by the backend.
+Creation is all-or-nothing. Validate nonempty names, bounded text lengths, supported cuisine and price values, valid dates and time zones, optional initial options, and optional HTTP/HTTPS links. A new round requires at least one new idea. Location, cuisine, and price are optional; title defaults to “Let’s grab a bite” and area can be empty. Place links are displayed, not fetched by the backend.
 
 Convert option times from the room's date and zone into UTC on the server. Require the local date to match the room and the instant to be later than its deadline. Preferred time windows are local minutes on that same date, with inclusive endpoints and no overnight wrap. Reject invalid or ambiguous local option times rather than silently moving them. [Temporal's time-zone conversion rules](https://tc39.es/proposal-temporal/docs/zoneddatetime.html) provide the needed disambiguation behavior.
 
@@ -165,7 +170,7 @@ Convert option times from the room's date and zone into UTC on the server. Requi
 
 ### Closure without a background worker
 
-The persisted deadline and server clock determine whether a room is open. At or after deadline_at, all new contributions are rejected, whether or not any browser was open at the deadline.
+The persisted deadline and server clock determine whether a room is open. An explicit early finish also closes a round. At or after deadline_at, all new contributions to that round are rejected, whether or not any browser was open at the deadline.
 
 The first request after expiry computes and stores the result. This is **lazy materialization**: the room closes logically at its deadline, while resolved_at records when the immutable snapshot was actually written. No notification or other side effect needs to happen at the exact deadline in v1.
 
@@ -175,7 +180,7 @@ A restart does not extend the round. An expired room cannot become writable simp
 
 Use a short SQLite BEGIN IMMEDIATE transaction for every room mutation and every finalization. For an existing room:
 
-1. Acquire the write transaction, load the room, and then read the current server time.
+1. Acquire the write transaction, load the room, check X-Room-Round, and then read the current server time.
 2. If a result already exists, return it and reject any attempted contribution.
 3. If the deadline has passed, load the current inputs, calculate and persist the result, and return a closed outcome.
 4. Otherwise, resolve ownership and apply the requested mutation.
@@ -189,13 +194,21 @@ Routine reads use a consistent read snapshot. If a read detects expiry, end that
 
 This uses SQLite's [immediate transaction behavior](https://sqlite.org/lang_transaction.html) to serialize competing updates and finalizations. It requires no in-memory timers or locks that would be lost on restart.
 
+### Early finish and another round
+
+Any active participant can confirm early finish once all currently joined people are ready and there is at least one option. The UI displays the joined/ready count and explains that absent invitees do not count. Check these conditions under the write lock so a new unready joiner or changed input prevents closure. Store closedEarly=true and the actual close time; do not rewrite the deadline. A deadline result records closedEarly=false and closedAt=deadline_at. Legacy result snapshots may omit the flag.
+
+Saving preferences or changing a response/reason resets the caller’s readiness. Adding/removing options or someone leaving resets everyone’s readiness. New joiners are unready. Readiness is not a vote.
+
+Starting another round is a separate immediate transaction requiring an active participant and a closed or expired current round. Validate the new date/options before modifying data, finalize the old round if needed, archive its frozen result, delete old options/responses, reset readiness, and insert the new options/deadline. Keep active identities and preferences. Competing restart requests cannot both succeed because the expected round is checked under the lock.
+
 ### Exact preference scoring
 
 The pure decision function receives only active participants and existing options and responses:
 
 1. Exclude every option with any active participant's block.
 2. Count approvals from active participants.
-3. For each participant with at least one supplied preference, let k be the number of supplied dimensions and m the number that match.
+3. For each participant with at least one supplied preference, let k be the number of supplied dimensions and m the number that match. Unknown restaurant cuisine/price does not earn a match for a supplied dimension; it does not exclude the option.
 4. Give that person 6 × m / k match units. Because k is 1, 2, or 3, these are exact integers.
 5. Sum match units across participants. Since the participating preference count is the same for every option, this ranks options exactly like the product's average score.
 6. Order eligible options by approval count descending, match units descending, and option ID ascending.
@@ -203,7 +216,7 @@ The pure decision function receives only active participants and existing option
 
 For display, group match percentage is 100 × total units / (6 × number of people with preferences). If nobody supplied preferences, use equal scores and label the fallback honestly. Never round before deciding a tie.
 
-Record whether votes won outright, preferences broke a vote tie, preferences selected without eligible votes, or first-proposed order broke the remaining tie. Explain when approvals were ignored because their options were blocked. Once stored, return this result unchanged.
+Record whether votes won outright, preferences broke a vote tie, preferences selected without eligible votes, or first-proposed order broke the remaining tie. Explain when approvals were ignored because their options were blocked. A winner with zero approvals is labeled a recommendation. Once stored, return this round’s result unchanged, including when archived.
 
 ## 8. Development and deployment
 

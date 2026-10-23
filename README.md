@@ -33,9 +33,13 @@ For a production build, `npm run start:host` binds to all network interfaces on 
 
 ## Use it
 
-Create a room with a meal date, area, and one or more place-and-time options. Share its URL with friends; they only need a display name. Everyone can add options, approve several meals, mark an option they cannot do, and save private cuisine, price, or time preferences.
+Choose **Try a demo** on the home page to vote and see a sample result immediately, including preference-only and all-excluded examples. The demo never saves data to real rooms.
 
-After ten minutes, any option with a block is excluded. Most approvals wins, then preference match, then proposal order. With no votes, preferences pick the meal; with no input, the first eligible proposal wins. The result is saved even if all browsers were closed at the deadline.
+Create a room with a name, meal date, and a place/time idea, or create it empty and add ideas together. Secondary restaurant details are optional. Share its URL with friends; they only need a display name. Everyone can add options, approve several meals, mark an option they cannot do with an optional constraint reason, and save private cuisine, price, or time preferences.
+
+Mark **I’m done** when ready. Once everyone who joined is ready, any participant can confirm an early finish; otherwise the round closes after ten minutes. Any option with a block is excluded. Most approvals wins, then preference match, then proposal order. With no votes, preferences pick the meal; with no input, the first eligible proposal wins. A no-approval winner is labeled as a suggestion. The result is saved even if all browsers were closed at the deadline.
+
+If all ideas are excluded, add an alternative while the round is open. After closure, **Start another round in this room** keeps the link, participants, and preferences, with new ideas and cleared votes. Previous results remain in round history.
 
 ## Verify it
 
@@ -59,7 +63,7 @@ The existing computer serves the app at [http://24.130.34.221:3000](http://24.13
 
 ## Database changes and backups
 
-Edit src/server/schema.ts, run npm run db:generate, review and commit the generated SQL, then apply it with npm run db:migrate.
+Edit src/server/schema.ts, run npm run db:generate, review and commit the generated SQL, then apply it with npm run db:migrate. Use this migration script: it handles SQLite table rebuilds without cascading away existing votes and checks foreign keys afterward.
 
 Create a consistent backup with:
 
