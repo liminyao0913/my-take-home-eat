@@ -6,10 +6,10 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run db:migrate && npm run check:startup && next dev --hostname localhost",
     "build": "next build",
-    "start": "next start",
-    "start:host": "npm run db:migrate && next start --hostname 0.0.0.0",
+    "start": "next start --hostname localhost",
+    "start:host": "npm run db:migrate && npm run check:startup && next start --hostname 0.0.0.0",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
@@ -18,13 +18,17 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
-    "test:e2e:release": "RUN_REAL_DEADLINE=1 playwright test"
+    "test:e2e:release": "RUN_REAL_DEADLINE=1 playwright test",
+    "prestart": "npm run db:migrate && npm run check:startup",
+    "check:startup": "node --env-file-if-exists=.env.local scripts/check-startup.mjs",
+    "test:hosted": "playwright test --config playwright.hosted.config.ts",
+    "test:capacity": "node scripts/capacity.mjs"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
-    "next": "^16.4.2",
+    "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "server-only": "^0.0.1",
@@ -39,7 +43,7 @@
     "@types/react-dom": "^19.3.0",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.4.2",
+    "eslint-config-next": "^16.4.3",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^5.0.5"

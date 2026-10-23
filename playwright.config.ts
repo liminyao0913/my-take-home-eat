@@ -13,7 +13,7 @@ export default defineConfig({
   use: { baseURL: "http://localhost:3100", trace: "retain-on-failure", screenshot: "only-on-failure", timezoneId: "UTC" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run db:migrate && npm run start -- --port 3100",
+    command: "npm run start -- --port 3100",
     url: "http://localhost:3100/api/health", reuseExistingServer: false, timeout: 60_000,
     env: { DATABASE_PATH: filename, APP_ORIGIN: "http://localhost:3100" },
   },

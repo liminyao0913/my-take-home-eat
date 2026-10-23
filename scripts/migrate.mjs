@@ -3,8 +3,9 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { validateEnvironment } from "./runtime.mjs";
 
-const filename = resolve(process.env.DATABASE_PATH || ".data/lets-eat.sqlite");
+const filename = resolve(validateEnvironment().databasePath);
 mkdirSync(dirname(filename), { recursive: true });
 const sqlite = new Sqlite(filename);
 try {

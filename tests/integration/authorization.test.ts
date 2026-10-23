@@ -14,6 +14,7 @@ import { renewCredential, pruneExpiredProfiles } from "@/server/profile-store";
 import { PUT } from "@/app/api/rooms/[roomId]/participants/me/ready/route";
 import { GET as getRoom } from "@/app/api/rooms/[roomId]/route";
 import { GET as getProfile } from "@/app/api/profile/route";
+import { handle } from "@/server/http";
 
 const token = "a".repeat(64);
 const hash = createHash("sha256").update(token).digest("hex");
@@ -126,4 +127,16 @@ it("prunes at most 100 children per pass before deleting a profile, retaining it
   }
   expect(database.sqlite.prepare("SELECT profile_id, legacy_available FROM browser_credentials WHERE token_hash = ?").get(hash)).toEqual({ profile_id: null, legacy_available: 0 });
   expect(() => service.create(hash, input)).toThrowError(expect.objectContaining({ status: 401 }));
+});
+
+it("logs only a route template, status, timing, code, and generated correlation ID", async () => {
+  const logs = vi.spyOn(console, "info").mockImplementation(() => {});
+  const request = new NextRequest("http://localhost:3000/api/rooms/private-room-id/options/123/response?private=query", {
+    method: "PUT", headers: { origin: "http://localhost:3000", cookie: "secret-cookie", "X-Request-Id": "untrusted-id" }, body: '{"private":"preference"}',
+  });
+  const response = await handle(request, () => { throw new Error("SELECT private data: secret-cookie"); });
+  const record = JSON.parse(logs.mock.calls[0][0]);
+  expect(record).toEqual({ requestId: expect.any(String), route: "/api/rooms/:roomId/options/:optionId/response", status: 500, durationMs: expect.any(Number), code: "SERVER_ERROR" });
+  expect(record.requestId).toBe(response.headers.get("X-Request-Id"));
+  expect(JSON.stringify(record)).not.toMatch(/private|secret-cookie|SELECT|untrusted/);
 });

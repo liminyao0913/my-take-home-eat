@@ -9,7 +9,11 @@ test("demo reaches vote, preference and all-excluded results without touching re
   const errors: string[] = [];
   page.on("request", (request) => { if (new URL(request.url()).pathname.startsWith("/api/rooms")) roomRequests.push(request.url()); });
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  const response = await page.goto("/");
+  expect(response?.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
+  expect(response?.headers()["x-frame-options"]).toBe("DENY");
+  const demo = await page.request.get("/demo");
+  expect(demo.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
   await page.getByRole("link", { name: "Try a demo" }).click();
   await expect(page.getByText("INTERACTIVE DEMO", { exact: true })).toBeVisible();
   await card(page, "Pasta House").getByRole("button", { name: /I'd go/ }).click();
