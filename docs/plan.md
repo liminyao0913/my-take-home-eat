@@ -2,6 +2,8 @@
 
 Status: simplified product baseline. The audience and core flow are confirmed; the choices below are defaults selected in response to the request for simplicity. Implementation choices are in [the technical spec](tech-spec.md).
 
+The next round of brainstorming is in [the next feature plan](next-features-plan.md): ZIP-based restaurant discovery, concurrent groups, result popups, room copying, and reusable preferences. That proposal keeps meals soon as the main flow and drops email notifications; the v1 baseline below describes the existing product.
+
 ## 1. Product and audience
 
 Help **3–8 friends or coworkers choose lunch or dinner soon** through one shared link, without signing up.

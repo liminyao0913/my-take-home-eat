@@ -2,6 +2,8 @@
 
 This is the running decision record for Let's Eat. Keep it updated as product and technical choices are made. Detailed product behavior lives in [docs/plan.md](docs/plan.md).
 
+The proposed next release is described in [docs/next-features-plan.md](docs/next-features-plan.md). Its recommendations extend the existing baseline; they are not implemented behavior.
+
 ## Confirmed direction
 
 - Start from zero and clarify product behavior before choosing technology.
@@ -105,3 +107,18 @@ Confirmed that the public URL reaches the app and reproduced `403 WRONG_ORIGIN` 
 Clicking the copy button should copy the complete link immediately and show “Copied ✓”, with no “Select and copy” field. The shared copy control uses the Clipboard API where available and a temporary offscreen text selection with `document.execCommand("copy")` when it is unavailable or denied. The temporary field is removed and focus restored after the attempt. If copying fails, show an error instead of claiming success. This also applies to copying the meal summary.
 
 Reproduced the visible field on the public HTTP site and added a failing browser regression before changing the component. Verified actual clipboard contents for unavailable and denied Clipboard API cases, and reran the mobile meal-summary journey. Type checking, lint, and the production build passed. After restarting, a browser check through `http://24.130.34.221:3000` confirmed that a single click copies the full invite URL without a visible field; the check removed only its temporary room.
+
+## Next feature brainstorm
+
+The user requested a new plan covering restaurant suggestions from a ZIP code, concurrent groups, result notifications, copying rooms, saved preferences, and other useful additions. They confirmed that meals soon remain the main flow. Email was considered and then dropped at their request because it requires sender/service setup; the plan collects no email addresses.
+
+Recommendations for discussion:
+
+- Use a short Google Places list alongside manual proposals. The environment has a `GMAP_KEY` variable; no paid API call or credential change was made during planning. Keep the key on the server, account for field costs and attribution, and separate place references from restricted provider content.
+- Keep SQLite and the existing independent-room model. Use 20 concurrent rooms of eight participants as an initial load-test target, not a capacity claim.
+- Add an in-page result popup first. Closed-page push is a later option requiring HTTPS, permission, supported devices, and durable deadline/delivery processing. The current public HTTP address remains unchanged.
+- “Plan this again” opens an editable new-room draft. Copy meal setup while resetting people, votes, blocks, private preferences, subscriptions, and the deadline.
+- Offer reusable cuisine and budget defaults for the same browser, applied explicitly to each new room. Availability remains specific to a meal; saved defaults never rewrite other room inputs.
+- Prioritize duplicate-place warnings and directions; consider recent rooms, calendar export, and QR invites afterward.
+
+The new plan includes failure behavior, rollout order, acceptance checks, and official references for the external-service constraints. These are product recommendations to resolve in the next technical spec, with no application or deployment changes in this planning step.
