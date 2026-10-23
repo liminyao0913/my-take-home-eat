@@ -67,7 +67,11 @@ Use `npm run test:e2e:release` to include an actual ten-minute round. Open `play
 
 ## Deploy
 
-The existing computer serves the app at [http://192.168.86.52:3000](http://192.168.86.52:3000), with local SQLite storage. The user's current `APP_ORIGIN=http://192.168.86.52:3000` is preserved in the ignored `.env.local`. Managed hosting remains deferred. For a future Render deployment, use the [Render configuration](render.yaml) and [deployment/recovery guide](docs/deployment.md). Render deployment requires a connected Render workspace, a source repository, and a paid persistent disk. Keep one app instance and apply migrations at runtime through `npm run start:host`.
+LAN access is our preferred deployment option. The existing computer serves the app at [http://192.168.86.52:3000](http://192.168.86.52:3000), with local SQLite storage and `APP_ORIGIN=http://192.168.86.52:3000` in the ignored `.env.local`.
+
+If access from outside the LAN is needed, we can try a publicly accessible address on the same computer, still using port 3000. Set `APP_ORIGIN` to that exact public URL and restart the service before sharing it.
+
+Managed hosting remains deferred. For a future Render deployment, use the [Render configuration](render.yaml) and [deployment/recovery guide](docs/deployment.md). Render deployment requires a connected Render workspace, a source repository, and a paid persistent disk. Keep one app instance and apply migrations at runtime through `npm run start:host`.
 
 ## Database changes and backups
 
